@@ -1,3 +1,29 @@
+# Environment — never commit real secrets
+.env
+
+# Database file — managed on the server, not in git
+cafe.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node / Vite
+node_modules/
+dist-ssr/
+*.local
+
 # Logs
 logs
 *.log
@@ -7,15 +33,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# macOS
 .DS_Store
 *.suo
 *.ntvs*

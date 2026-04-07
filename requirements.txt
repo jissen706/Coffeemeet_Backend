@@ -1,0 +1,13 @@
+# Runtime dependencies
+fastapi==0.129.2
+uvicorn==0.41.0
+sqlalchemy==2.0.46
+pydantic==2.12.5
+python-jose==3.5.0
+argon2-cffi==25.1.0
+python-dotenv==1.2.2
+psycopg2-binary==2.9.10
+
+# Dev / test dependencies
+httpx==0.28.1
+pytest==9.0.3
