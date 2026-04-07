@@ -5,6 +5,8 @@ function BookingPage({ slot, onConfirm, onBack }) {
 
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '' });
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   const fmt = (dt) =>
     new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -31,7 +33,7 @@ function BookingPage({ slot, onConfirm, onBack }) {
     if (errors[field]) setErrors((e) => ({ ...e, [field]: null }));
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const errs = {};
     if (!form.firstName.trim()) errs.firstName = 'Required';
     if (!form.lastName.trim())  errs.lastName  = 'Required';
@@ -43,11 +45,18 @@ function BookingPage({ slot, onConfirm, onBack }) {
       return;
     }
 
-    onConfirm({
-      first_name: form.firstName.trim(),
-      last_name:  form.lastName.trim(),
-      email:      form.email.trim(),
-    });
+    setSubmitting(true);
+    setApiError(null);
+    try {
+      await onConfirm({
+        first_name: form.firstName.trim(),
+        last_name:  form.lastName.trim(),
+        email:      form.email.trim(),
+      });
+    } catch (err) {
+      setApiError(err.message || 'Booking failed. Please try again.');
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -112,8 +121,9 @@ function BookingPage({ slot, onConfirm, onBack }) {
             </div>
           </div>
 
-          <button className="btn-confirm-big" onClick={handleSubmit}>
-            ☕ Confirm Booking
+          {apiError && <div className="form-error" style={{ marginBottom: 12 }}>{apiError}</div>}
+          <button className="btn-confirm-big" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Booking…' : '☕ Confirm Booking'}
           </button>
         </div>
       </div>

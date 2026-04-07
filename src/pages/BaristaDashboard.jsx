@@ -5,9 +5,7 @@ import BaristaSidebar from '../components/BaristaSidebar';
 import BaristaLogin from '../components/barista/BaristaLogin';
 import BaristaCalendarGrid from '../components/barista/BaristaCalendarGrid';
 import BaristaDayTimeline from '../components/barista/BaristaDayTimeline';
-import { getCafe, getSlots } from '../api';
-
-const CAFE_ID = 1;
+import { getCafe, getSlots, getCafeBaristas } from '../api';
 
 const EXPERTISE_OPTIONS = [
   'Latte Art', 'Cold Brew Master', 'Espresso Expert',
@@ -24,18 +22,27 @@ function BaristaDashboard() {
   const [barista, setBarista] = useState(null);
   const [cafe, setCafe] = useState(null);
   const [slots, setSlots] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [allBaristas, setAllBaristas] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
 
+  // Fetch cafe data after barista logs in
   useEffect(() => {
-    Promise.all([getCafe(CAFE_ID), getSlots(CAFE_ID)])
-      .then(([cafeData, slotsData]) => {
+    if (!barista) return;
+    setLoading(true);
+    Promise.all([
+      getCafe(barista.cafe_id),
+      getSlots(barista.cafe_id),
+      getCafeBaristas(barista.cafe_id),
+    ])
+      .then(([cafeData, slotsData, baristasData]) => {
         setCafe(cafeData);
         setSlots(slotsData);
+        setAllBaristas(baristasData.map((b) => ({ ...b, expertise: getExpertise(b.id) })));
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [barista]);
 
   const slotsByDate = useMemo(() => {
     const map = {};
@@ -55,7 +62,6 @@ function BaristaDashboard() {
     setSlots((prev) => prev.filter((s) => s.id !== slotId));
   }
 
-  // Show login screen regardless of loading state — it doesn't depend on cafe data
   if (!barista) {
     return <BaristaLogin joinCode={joinCode} onLogin={setBarista} />;
   }
@@ -69,24 +75,10 @@ function BaristaDashboard() {
     );
   }
 
-  const allBaristas = Object.values(
-    slots.reduce((acc, slot) => {
-      if (slot.barista && !acc[slot.barista.id]) {
-        acc[slot.barista.id] = { ...slot.barista, expertise: getExpertise(slot.barista.id) };
-      }
-      return acc;
-    }, {})
-  );
-
-  // If the logged-in barista isn't in any slots yet, add them to the sidebar
-  if (!allBaristas.find((b) => b.id === barista.id)) {
-    allBaristas.unshift({ ...barista, expertise: getExpertise(barista.id) });
-  }
-
   return (
     <div className="app">
       <Header
-        cafeName={cafe?.name || 'Brew & Chat'}
+        cafeName={cafe?.name || 'CoffeeMeet'}
         description="Manage your slots and availability"
         ownerName={`Barista: ${barista.name}`}
       />
@@ -96,6 +88,7 @@ function BaristaDashboard() {
           slots={slots}
           startDate={cafe?.start_date}
           barista={barista}
+          token={barista.token}
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
           onSlotCreated={handleSlotCreated}
@@ -105,6 +98,7 @@ function BaristaDashboard() {
             date={selectedDate}
             slots={slotsByDate[selectedDate] || []}
             barista={barista}
+            token={barista.token}
             onClose={() => setSelectedDate(null)}
             onSlotCreated={handleSlotCreated}
             onSlotDeleted={handleSlotDeleted}

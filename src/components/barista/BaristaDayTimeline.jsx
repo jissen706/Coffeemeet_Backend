@@ -17,7 +17,7 @@ function layoutSlots(slots){
   return rows.map(({slot,col})=>({slot,col,n}));
 }
 
-export default function BaristaDayTimeline({ date, slots, barista, onClose, onSlotCreated, onSlotDeleted }) {
+export default function BaristaDayTimeline({ date, slots, barista, token, onClose, onSlotCreated, onSlotDeleted }) {
   const [showPicker, setShowPicker]     = useState(false);
   const [detailSlot, setDetailSlot]     = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -29,10 +29,11 @@ export default function BaristaDayTimeline({ date, slots, barista, onClose, onSl
   function handlePickerConfirm(newSlots){ newSlots.forEach(s=>onSlotCreated(s)); setShowPicker(false); }
 
   async function handleDeleteConfirm() {
-    try { await deleteSlot(deleteTarget.id); } catch { /* backend not connected */ }
+    // Optimistic update
     onSlotDeleted(deleteTarget.id);
     if (detailSlot?.id === deleteTarget.id) setDetailSlot(null);
     setDeleteTarget(null);
+    try { await deleteSlot(deleteTarget.id, token); } catch { /* already removed from UI */ }
   }
 
   return (
@@ -118,7 +119,7 @@ export default function BaristaDayTimeline({ date, slots, barista, onClose, onSl
       )}
 
       {showPicker&&(
-        <BaristaTimeRangePicker date={date} existingSlots={slots} barista={barista} onConfirm={handlePickerConfirm} onCancel={()=>setShowPicker(false)}/>
+        <BaristaTimeRangePicker date={date} existingSlots={slots} barista={barista} token={token} onConfirm={handlePickerConfirm} onCancel={()=>setShowPicker(false)}/>
       )}
     </>
   );

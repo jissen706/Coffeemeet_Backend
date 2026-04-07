@@ -31,7 +31,7 @@ function slotToBlockRange(slot) {
   };
 }
 
-export default function BaristaTimeRangePicker({ date, existingSlots, barista, onConfirm, onCancel }) {
+export default function BaristaTimeRangePicker({ date, existingSlots, barista, token, onConfirm, onCancel }) {
   const [dragStart,   setDragStart]   = useState(null);
   const [dragCurrent, setDragCurrent] = useState(null);
   const [isDragging,  setIsDragging]  = useState(false);
@@ -83,14 +83,9 @@ export default function BaristaTimeRangePicker({ date, existingSlots, barista, o
         start_time: minsToISO(startMins, date),
         end_time:   minsToISO(endMins,   date),
         location:   location.trim(),
-        zoom_link:  zoomLink.trim() || null,
+        meet_link:  zoomLink.trim() || null,
       };
-      let created;
-      try {
-        created = await createSlot(1, slotData);
-      } catch {
-        created = { id: Date.now() + results.length, barista, customer: null, ...slotData };
-      }
+      const created = await createSlot(barista.cafe_id, slotData, token);
       results.push(created);
     }
     setSubmitting(false);

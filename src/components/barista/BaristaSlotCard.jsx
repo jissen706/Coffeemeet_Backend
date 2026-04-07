@@ -1,5 +1,5 @@
 function BaristaSlotCard({ slot, isOwn }) {
-  const { barista, customer, start_time, end_time, location, zoom_link } = slot;
+  const { barista, customer, start_time, end_time, location, meet_link } = slot;
   const isBooked = customer !== null;
 
   const initials = barista.name
@@ -32,11 +32,11 @@ function BaristaSlotCard({ slot, isOwn }) {
             <span className="slot-meta-icon">&#128205;</span>
             <span>{location}</span>
           </div>
-          {zoom_link && (
+          {meet_link && (
             <div className="slot-meta-row">
               <span className="slot-meta-icon">🎥</span>
-              <a href={zoom_link} target="_blank" rel="noreferrer" className="zoom-link">
-                Zoom Link
+              <a href={meet_link} target="_blank" rel="noreferrer" className="zoom-link">
+                Meet Link
               </a>
             </div>
           )}

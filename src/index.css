@@ -1842,6 +1842,16 @@ body {
 }
 .tl-confirm-delete { background: #c0392b; }
 .tl-confirm-delete:hover { background: #a93226; }
+.tl-confirm-error {
+  font-size: 0.8rem;
+  color: #c0392b;
+  background: #fdf0ef;
+  border: 1px solid #f5c6c2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px;
+  text-align: center;
+}
 
 .tl-slot-name {
   font-size: 0.68rem; font-weight: 700;
@@ -1919,4 +1929,979 @@ body {
 .error-screen {
   color: var(--zero-color);
   background: var(--bg);
+}
+
+/* ================================================================
+   OWNER VIEWS
+   ================================================================ */
+
+/* ---- Owner Login ---- */
+.owner-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #1c0e07 0%, #3b1f0f 100%);
+  padding: 24px;
+}
+
+.owner-login-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-lg);
+}
+
+.owner-login-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.owner-login-icon {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.owner-login-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.owner-login-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.owner-mode-tabs {
+  display: flex;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-bottom: 24px;
+  gap: 2px;
+}
+
+.owner-mode-tab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.owner-mode-tab.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.owner-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.owner-login-btn {
+  margin-top: 4px;
+  padding: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-login-btn:hover:not(:disabled) { background: var(--primary-hover); }
+.owner-login-btn:disabled { opacity: 0.65; cursor: default; }
+
+.owner-form-error {
+  background: var(--zero-bg);
+  color: var(--zero-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ---- Owner Dashboard ---- */
+.owner-dashboard {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-dash-header {
+  background: linear-gradient(135deg, #2e1508 0%, #5c3420 100%);
+  color: var(--text-sidebar);
+  padding: 20px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.owner-dash-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.owner-dash-icon {
+  font-size: 2rem;
+}
+
+.owner-dash-welcome {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.owner-dash-sub {
+  font-size: 0.78rem;
+  color: var(--text-sidebar-muted);
+  font-weight: 500;
+}
+
+.owner-dash-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.owner-create-btn {
+  padding: 9px 18px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-create-btn:hover { background: #b5672e; }
+
+.owner-logout-btn {
+  padding: 9px 18px;
+  background: rgba(255,255,255,0.12);
+  color: var(--text-sidebar);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-logout-btn:hover { background: rgba(255,255,255,0.2); }
+
+.owner-dash-body {
+  padding: 36px;
+  flex: 1;
+}
+
+.owner-section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.owner-loading {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 24px 0;
+}
+
+.owner-empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.owner-empty-icon { font-size: 3rem; }
+.owner-empty-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.owner-empty-sub   { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px; }
+
+.owner-cafe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.owner-cafe-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.owner-cafe-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.owner-cafe-card-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.owner-cafe-card-dates {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.owner-cafe-card-code {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.owner-cafe-card-code strong { color: var(--accent); }
+
+.owner-cafe-card-arrow {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: var(--border);
+  transition: color 0.15s;
+}
+
+.owner-cafe-card:hover .owner-cafe-card-arrow { color: var(--primary); }
+
+/* ---- Owner Create Cafe Modal ---- */
+.owner-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.owner-modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.owner-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.owner-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.owner-form-row .form-field { flex: 1; }
+
+.owner-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 12px 0 4px;
+  cursor: pointer;
+}
+
+.owner-toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.owner-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.owner-modal-cancel {
+  padding: 9px 18px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-modal-cancel:hover { background: var(--bg); }
+
+.owner-modal-submit {
+  padding: 9px 20px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-modal-submit:hover:not(:disabled) { background: var(--primary-hover); }
+.owner-modal-submit:disabled { opacity: 0.65; cursor: default; }
+
+/* ---- Share Links Popup ---- */
+.share-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 24px;
+}
+
+.share-popup {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: var(--shadow-lg);
+}
+
+.share-header {
+  margin-bottom: 24px;
+}
+
+.share-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.share-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.share-links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.share-link-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-link-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.share-link-url {
+  font-size: 0.82rem;
+  color: var(--primary);
+  word-break: break-all;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.share-copy-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.share-copy-btn:hover { background: var(--primary-hover); }
+.share-copy-btn.copied { background: #1a7a40; }
+
+.share-dismiss {
+  width: 100%;
+  padding: 11px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.share-dismiss:hover { background: var(--primary-hover); }
+
+/* ---- Owner Cafe View Topbar ---- */
+.owner-cafe-topbar {
+  background: linear-gradient(135deg, #2e1508 0%, #5c3420 100%);
+  color: var(--text-sidebar);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.owner-cafe-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.owner-back-btn {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-sidebar);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-back-btn:hover { background: rgba(255,255,255,0.2); }
+
+.owner-cafe-topbar-icon { font-size: 1.5rem; }
+
+.owner-cafe-topbar-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.owner-cafe-topbar-sub {
+  font-size: 0.72rem;
+  color: var(--text-sidebar-muted);
+}
+
+.owner-cafe-topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.owner-share-btn {
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.12);
+  color: var(--text-sidebar);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-share-btn:hover { background: rgba(255,255,255,0.22); }
+
+.owner-settings-btn {
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.owner-settings-btn:hover { background: #b5672e; }
+
+/* ── Topbar view tabs (Baristas / Customers) ───────────────────────────── */
+.owner-view-tabs {
+  display: flex;
+  gap: 4px;
+}
+.owner-view-tab {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.owner-view-tab:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.owner-view-tab.active {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border-color: rgba(255,255,255,0.6);
+}
+.owner-topbar-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,0.25);
+  align-self: center;
+  margin: 0 4px;
+}
+
+/* ── People full view ──────────────────────────────────────────────────── */
+.owner-people-view {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+}
+.owner-people-view-header {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.owner-people-count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.owner-people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.owner-person-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: box-shadow 0.15s;
+}
+.owner-person-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.owner-person-card-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.owner-person-card-info { flex: 1; min-width: 0; }
+.owner-person-card-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.owner-person-card-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.owner-person-card .owner-person-remove {
+  opacity: 0;
+  flex-shrink: 0;
+}
+.owner-person-card:hover .owner-person-remove { opacity: 1; }
+
+/* ---- Owner Settings Panel ---- */
+.owner-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.owner-settings-panel {
+  background: var(--surface);
+  width: 420px;
+  max-width: 100vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+.owner-settings-header {
+  background: linear-gradient(135deg, #2e1508 0%, #5c3420 100%);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.owner-settings-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.owner-settings-close {
+  background: rgba(255,255,255,0.12);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.owner-settings-close:hover { background: rgba(255,255,255,0.25); }
+
+.owner-settings-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border-light);
+  background: var(--surface-warm);
+}
+
+.owner-settings-tab {
+  flex: 1;
+  padding: 11px 8px;
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+
+.owner-settings-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.owner-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.owner-settings-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.owner-save-msg {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.owner-save-msg.ok  { color: #1a7a40; }
+.owner-save-msg.err { color: var(--zero-color); }
+
+/* ---- Owner People List (Baristas / Customers) ---- */
+.owner-people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.owner-empty-list {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 20px 0;
+}
+
+.owner-person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+
+.owner-person-row:hover { background: var(--bg); }
+
+.owner-person-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.owner-person-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-person-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.owner-person-detail {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.owner-person-remove {
+  opacity: 0;
+  padding: 4px 10px;
+  background: var(--zero-bg);
+  color: var(--zero-color);
+  border: 1px solid var(--zero-color);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.owner-person-row:hover .owner-person-remove { opacity: 1; }
+.owner-person-remove:hover { background: var(--zero-color); color: #fff; }
+
+/* ---- Owner Day Timeline extras ---- */
+.tl-detail-owner-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+.tl-detail-action-btn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.tl-detail-action-btn.unbook {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+.tl-detail-action-btn.unbook:hover { background: #ffe69c; }
+
+.tl-detail-action-btn.delete {
+  background: var(--zero-bg);
+  color: var(--zero-color);
+  border: 1px solid var(--zero-color);
+}
+
+.tl-detail-action-btn.delete:hover { background: var(--zero-color); color: #fff; }
+
+/* ── Landing Page ─────────────────────────────────────────────────────────── */
+
+.landing-page {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 80px;
+}
+
+.landing-hero {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.landing-logo {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 4px 12px rgba(139, 69, 19, 0.25));
+}
+
+.landing-title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--primary);
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.landing-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  max-width: 460px;
+  line-height: 1.6;
+}
+
+.landing-cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 1000px;
+  width: 100%;
+}
+
+.landing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  flex: 1;
+  min-width: 260px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+
+.landing-card:hover {
+  box-shadow: var(--shadow);
+}
+
+.landing-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.landing-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.landing-card-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  flex: 1;
+}
+
+.landing-code-input {
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.landing-card-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.1s;
+  text-align: center;
+}
+
+.landing-card-btn:active {
+  transform: scale(0.98);
+}
+
+.landing-card-btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.landing-card-btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.landing-card-btn-secondary {
+  background: var(--surface-warm);
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+
+.landing-card-btn-secondary:hover {
+  background: var(--border-light);
 }

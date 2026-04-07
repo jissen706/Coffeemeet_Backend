@@ -28,7 +28,7 @@ function getMonthDays(year, month) {
   return cells;
 }
 
-function BaristaCalendarGrid({ slots, startDate, barista, selectedDate, onSelectDate, onSlotCreated }) {
+function BaristaCalendarGrid({ slots, startDate, barista, token, selectedDate, onSelectDate, onSlotCreated }) {
   const [pickerDate, setPickerDate] = useState(null);
   const initialMonth = useMemo(() => {
     if (startDate) {
@@ -142,6 +142,7 @@ function BaristaCalendarGrid({ slots, startDate, barista, selectedDate, onSelect
         date={pickerDate}
         existingSlots={slotsByDate[pickerDate] || []}
         barista={barista}
+        token={token}
         onConfirm={handlePickerConfirm}
         onCancel={() => setPickerDate(null)}
       />
