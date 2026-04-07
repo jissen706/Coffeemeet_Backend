@@ -1,4 +1,7 @@
+import csv
+import io
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
@@ -52,6 +55,69 @@ def get_cafe_customers(
     if not cafe:
         raise HTTPException(status_code=404, detail="Cafe not found or not authorized")
     return db.query(models.Customer).filter(models.Customer.cafe_id == cafe_id).all()
+
+
+@router.get("/cafes/{cafe_id}/export")
+def export_cafe_data(
+    cafe_id: int,
+    owner: dict = Depends(require_owner),
+    db: Session = Depends(get_db),
+):
+    cafe = db.query(models.Cafe).filter(
+        models.Cafe.id == cafe_id,
+        models.Cafe.owner_id == int(owner["sub"]),
+    ).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found or not authorized")
+
+    slots = db.query(models.Slot).filter(models.Slot.cafe_id == cafe_id).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Sheet 1: Bookings
+    writer.writerow(["=== BOOKINGS ==="])
+    writer.writerow(["Date", "Start Time", "End Time", "Location", "Status", "Meet Link",
+                     "Barista Name", "Barista Email", "Customer Name", "Customer Email"])
+    for slot in sorted(slots, key=lambda s: s.start_time):
+        writer.writerow([
+            slot.start_time.strftime("%Y-%m-%d"),
+            slot.start_time.strftime("%H:%M"),
+            slot.end_time.strftime("%H:%M"),
+            slot.location or "",
+            slot.status,
+            slot.meet_link or "",
+            slot.barista.name if slot.barista else "",
+            slot.barista.email if slot.barista else "",
+            slot.customer.name if slot.customer else "",
+            slot.customer.email if slot.customer else "",
+        ])
+
+    writer.writerow([])
+
+    # Sheet 2: Baristas
+    writer.writerow(["=== BARISTAS ==="])
+    writer.writerow(["Name", "Email", "Phone"])
+    baristas = db.query(models.Barista).filter(models.Barista.cafe_id == cafe_id).all()
+    for b in baristas:
+        writer.writerow([b.name, b.email, b.phone_number or ""])
+
+    writer.writerow([])
+
+    # Sheet 3: Customers
+    writer.writerow(["=== CUSTOMERS ==="])
+    writer.writerow(["Name", "Email"])
+    customers = db.query(models.Customer).filter(models.Customer.cafe_id == cafe_id).all()
+    for c in customers:
+        writer.writerow([c.name, c.email])
+
+    output.seek(0)
+    filename = f"{cafe.name.replace(' ', '_')}_{cafe.start_date}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @router.post("/cafes", response_model=schemas.CafeResponse)
