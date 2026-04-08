@@ -10,6 +10,7 @@ load_dotenv()
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
+TOKEN_EXPIRE_HOURS_CUSTOMER = 24 * 30  # 30 days — customers have no admin power
 
 security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)
@@ -17,7 +18,8 @@ optional_security = HTTPBearer(auto_error=False)
 
 def create_token(data: dict) -> str:
     payload = data.copy()
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_HOURS)
+    hours = TOKEN_EXPIRE_HOURS_CUSTOMER if data.get("role") == "customer" else TOKEN_EXPIRE_HOURS
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=hours)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
