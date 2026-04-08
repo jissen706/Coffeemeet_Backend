@@ -1,9 +1,11 @@
+import threading
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 from auth import require_barista, get_optional_user
+from email_service import send_booking_confirmation
 
 router = APIRouter()
 
@@ -74,6 +76,14 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
     slot.status = "booked"
     db.commit()
     db.refresh(slot)
+
+    # Send confirmation email in background so it doesn't slow down the response
+    threading.Thread(
+        target=send_booking_confirmation,
+        args=(slot, customer.name, customer.email),
+        daemon=True,
+    ).start()
+
     return slot
 
 
