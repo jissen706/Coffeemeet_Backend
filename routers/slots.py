@@ -68,6 +68,7 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
         already_booked = db.query(models.Slot).filter(
             models.Slot.cafe_id == slot.cafe_id,
             models.Slot.customer_id == booking.customer_id,
+            models.Slot.status == "booked",
         ).first()
         if already_booked:
             raise HTTPException(status_code=400, detail="You already have a booking in this cafe")
