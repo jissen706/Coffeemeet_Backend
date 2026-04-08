@@ -16,7 +16,8 @@ class Cafe(Base):
     name = Column(String, nullable=False)
     start_date = Column(Date)
     end_date = Column(Date)
-    join_code = Column(String, unique=True, default=generate_cafe_code)
+    join_code = Column(String, unique=True, default=generate_cafe_code)          # host-only
+    participant_code = Column(String, unique=True, default=generate_cafe_code)  # participant-only
     one_slot = Column(Boolean, default=True)
 
     owner_id = Column(Integer, ForeignKey("owners.id"))

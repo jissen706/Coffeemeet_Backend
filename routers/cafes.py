@@ -10,11 +10,11 @@ from auth import require_owner
 router = APIRouter()
 
 
-@router.get("/cafes/join/{join_code}", response_model=schemas.CafeResponse)
-def get_cafe_by_join_code(join_code: str, db: Session = Depends(get_db)):
-    cafe = db.query(models.Cafe).filter(models.Cafe.join_code == join_code).first()
+@router.get("/cafes/join/{code}", response_model=schemas.CafeResponse)
+def get_cafe_by_participant_code(code: str, db: Session = Depends(get_db)):
+    cafe = db.query(models.Cafe).filter(models.Cafe.participant_code == code).first()
     if not cafe:
-        raise HTTPException(status_code=404, detail="Cafe not found")
+        raise HTTPException(status_code=404, detail="Cafe not found — check your participant link")
     return cafe
 
 

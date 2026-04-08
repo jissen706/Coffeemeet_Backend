@@ -52,6 +52,7 @@ class CafeResponse(BaseModel):
     end_date: date
     one_slot: bool
     join_code: str
+    participant_code: str
     owner_id: int
 
     class Config:

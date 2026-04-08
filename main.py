@@ -10,10 +10,25 @@ load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
-# Idempotent migration: add bio column to baristas if it doesn't exist yet
+# Idempotent migrations
 from sqlalchemy import text
 with engine.connect() as _conn:
     _conn.execute(text("ALTER TABLE baristas ADD COLUMN IF NOT EXISTS bio TEXT"))
+    _conn.execute(text("ALTER TABLE cafes ADD COLUMN IF NOT EXISTS participant_code VARCHAR"))
+    # Backfill existing cafes that have no participant_code yet
+    _conn.execute(text("""
+        UPDATE cafes
+        SET participant_code = UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 6))
+        WHERE participant_code IS NULL
+    """))
+    # Ensure uniqueness after backfill (retry any collisions)
+    _conn.execute(text("""
+        UPDATE cafes c
+        SET participant_code = UPPER(SUBSTRING(MD5(c.id::TEXT || 'p') FROM 1 FOR 6))
+        WHERE participant_code IN (
+            SELECT participant_code FROM cafes GROUP BY participant_code HAVING COUNT(*) > 1
+        )
+    """))
     _conn.commit()
 
 _raw_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
