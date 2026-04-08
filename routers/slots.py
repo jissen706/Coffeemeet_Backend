@@ -77,10 +77,20 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
     db.commit()
     db.refresh(slot)
 
-    # Send confirmation email in background so it doesn't slow down the response
+    # Snapshot all data needed for the email before the session closes
+    email_data = {
+        "customer_name": customer.name,
+        "customer_email": customer.email,
+        "start_time": slot.start_time,
+        "end_time": slot.end_time,
+        "location": slot.location,
+        "meet_link": slot.meet_link,
+        "host_name": slot.barista.name if slot.barista else "Your Host",
+        "host_email": slot.barista.email if slot.barista else "",
+    }
     threading.Thread(
         target=send_booking_confirmation,
-        args=(slot, customer.name, customer.email),
+        kwargs=email_data,
         daemon=True,
     ).start()
 

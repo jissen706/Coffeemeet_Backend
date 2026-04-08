@@ -11,51 +11,48 @@ EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS", "")
 EMAIL_APP_PASSWORD = os.environ.get("EMAIL_APP_PASSWORD", "")
 
 
-def _build_ics(slot, customer_name: str) -> str:
-    """Generate a .ics calendar invite string."""
+def _build_ics(start_time, end_time, location, meet_link, host_name, host_email) -> str:
     def fmt(dt):
         utc = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
         return utc.strftime("%Y%m%dT%H%M%SZ")
 
-    host_name = slot.barista.name if slot.barista else "Your Host"
-    location = slot.location or ""
-    meet_link = slot.meet_link or ""
     description = f"Coffee chat with {host_name}"
     if meet_link:
         description += f"\\nMeet link: {meet_link}"
 
-    return "\r\n".join([
+    lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//CoffeeMeet//EN",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
-        f"DTSTART:{fmt(slot.start_time)}",
-        f"DTEND:{fmt(slot.end_time)}",
+        f"DTSTART:{fmt(start_time)}",
+        f"DTEND:{fmt(end_time)}",
         f"SUMMARY:Coffee Chat with {host_name}",
         f"DESCRIPTION:{description}",
-        f"LOCATION:{location}",
+        f"LOCATION:{location or ''}",
         f"ORGANIZER:mailto:{EMAIL_ADDRESS}",
-        f"ATTENDEE:mailto:{slot.barista.email}" if slot.barista else "",
         "STATUS:CONFIRMED",
         "END:VEVENT",
         "END:VCALENDAR",
-    ])
+    ]
+    if host_email:
+        lines.insert(-2, f"ATTENDEE:mailto:{host_email}")
+    return "\r\n".join(lines)
 
 
-def _build_html(slot, customer_name: str) -> str:
-    host_name = slot.barista.name if slot.barista else "Your Host"
-    date_str = slot.start_time.strftime("%A, %B %-d, %Y")
-    start_str = slot.start_time.strftime("%-I:%M %p")
-    end_str = slot.end_time.strftime("%-I:%M %p")
-    location = slot.location or "TBD"
+def _build_html(customer_name, host_name, start_time, end_time, location, meet_link) -> str:
+    date_str = start_time.strftime("%A, %B %-d, %Y")
+    start_str = start_time.strftime("%-I:%M %p")
+    end_str = end_time.strftime("%-I:%M %p")
+    location = location or "TBD"
     meet_link_html = ""
-    if slot.meet_link:
+    if meet_link:
         meet_link_html = f"""
         <tr>
           <td style="padding:8px 0;color:#888;font-size:14px;">Meet Link</td>
           <td style="padding:8px 0;font-size:14px;">
-            <a href="{slot.meet_link}" style="color:#c8773a;">{slot.meet_link}</a>
+            <a href="{meet_link}" style="color:#c8773a;">{meet_link}</a>
           </td>
         </tr>"""
 
@@ -86,7 +83,6 @@ def _build_html(slot, customer_name: str) -> str:
               A calendar invite is attached — add it to your calendar so you don't miss it.
             </p>
 
-            <!-- Details card -->
             <table width="100%" cellpadding="0" cellspacing="0"
                    style="background:#fdf8f4;border-radius:8px;border:1px solid #ede0d4;padding:20px 24px;">
               <tr>
@@ -121,30 +117,44 @@ def _build_html(slot, customer_name: str) -> str:
 </html>"""
 
 
-def send_booking_confirmation(slot, customer_name: str, customer_email: str):
-    """Send a booking confirmation email with .ics attachment. Silently no-ops if not configured."""
+def send_booking_confirmation(
+    customer_name: str,
+    customer_email: str,
+    start_time,
+    end_time,
+    location: str,
+    meet_link: str,
+    host_name: str,
+    host_email: str,
+):
+    """Send a booking confirmation email with .ics attachment. No-ops if not configured."""
     if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
+        print("[email] Skipped — EMAIL_ADDRESS or EMAIL_APP_PASSWORD not set")
         return
 
-    msg = MIMEMultipart("mixed")
-    msg["From"] = f"CoffeeMeet <{EMAIL_ADDRESS}>"
-    msg["To"] = customer_email
-    msg["Subject"] = f"Your coffee chat is confirmed ☕"
-
-    msg.attach(MIMEText(_build_html(slot, customer_name), "html"))
-
-    ics_content = _build_ics(slot, customer_name)
-    ics_part = MIMEBase("text", "calendar", method="REQUEST", name="invite.ics")
-    ics_part.set_payload(ics_content.encode("utf-8"))
-    encoders.encode_base64(ics_part)
-    ics_part.add_header("Content-Disposition", "attachment", filename="invite.ics")
-    msg.attach(ics_part)
-
     try:
+        msg = MIMEMultipart("mixed")
+        msg["From"] = f"CoffeeMeet <{EMAIL_ADDRESS}>"
+        msg["To"] = customer_email
+        msg["Subject"] = "Your coffee chat is confirmed"
+
+        msg.attach(MIMEText(
+            _build_html(customer_name, host_name, start_time, end_time, location, meet_link),
+            "html"
+        ))
+
+        ics_content = _build_ics(start_time, end_time, location, meet_link, host_name, host_email)
+        ics_part = MIMEBase("text", "calendar", method="REQUEST", name="invite.ics")
+        ics_part.set_payload(ics_content.encode("utf-8"))
+        encoders.encode_base64(ics_part)
+        ics_part.add_header("Content-Disposition", "attachment", filename="invite.ics")
+        msg.attach(ics_part)
+
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
             server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
             server.sendmail(EMAIL_ADDRESS, customer_email, msg.as_string())
+
         print(f"[email] Confirmation sent to {customer_email}")
     except Exception as e:
         print(f"[email] Failed to send to {customer_email}: {e}")
