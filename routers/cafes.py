@@ -75,10 +75,10 @@ def export_cafe_data(
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Sheet 1: Bookings
+    # Section 1: Bookings
     writer.writerow(["=== BOOKINGS ==="])
-    writer.writerow(["Date", "Start Time", "End Time", "Location", "Status", "Meet Link",
-                     "Barista Name", "Barista Email", "Customer Name", "Customer Email"])
+    writer.writerow(["Date", "Start Time", "End Time", "Location", "Status", "Virtual Meeting Link",
+                     "Host Name", "Host Email", "Participant Name", "Participant Email"])
     for slot in sorted(slots, key=lambda s: s.start_time):
         writer.writerow([
             slot.start_time.strftime("%Y-%m-%d"),
@@ -95,17 +95,17 @@ def export_cafe_data(
 
     writer.writerow([])
 
-    # Sheet 2: Baristas
-    writer.writerow(["=== BARISTAS ==="])
-    writer.writerow(["Name", "Email", "Phone"])
+    # Section 2: Hosts
+    writer.writerow(["=== HOSTS ==="])
+    writer.writerow(["Name", "Email", "Phone", "Bio"])
     baristas = db.query(models.Barista).filter(models.Barista.cafe_id == cafe_id).all()
     for b in baristas:
-        writer.writerow([b.name, b.email, b.phone_number or ""])
+        writer.writerow([b.name, b.email, b.phone_number or "", b.bio or ""])
 
     writer.writerow([])
 
-    # Sheet 3: Customers
-    writer.writerow(["=== CUSTOMERS ==="])
+    # Section 3: Participants
+    writer.writerow(["=== PARTICIPANTS ==="])
     writer.writerow(["Name", "Email"])
     customers = db.query(models.Customer).filter(models.Customer.cafe_id == cafe_id).all()
     for c in customers:
