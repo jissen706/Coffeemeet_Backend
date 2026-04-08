@@ -26,6 +26,7 @@ def register_or_login_barista(barista: schemas.BaristaCreate, db: Session = Depe
             name=barista.name,
             email=barista.email,
             phone_number=barista.phone_number,
+            bio=barista.bio,
             cafe_id=cafe.id,
         )
         db.add(db_barista)

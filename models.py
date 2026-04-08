@@ -58,6 +58,7 @@ class Barista(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone_number = Column(String(20), nullable=True)
+    bio = Column(String, nullable=True)
 
     cafe_id = Column(Integer, ForeignKey("cafes.id"))
     cafe = relationship("Cafe", back_populates="baristas")

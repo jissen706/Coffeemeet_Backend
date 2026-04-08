@@ -10,6 +10,12 @@ load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
+# Idempotent migration: add bio column to baristas if it doesn't exist yet
+from sqlalchemy import text
+with engine.connect() as _conn:
+    _conn.execute(text("ALTER TABLE baristas ADD COLUMN IF NOT EXISTS bio TEXT"))
+    _conn.commit()
+
 _raw_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 

@@ -64,6 +64,7 @@ class BaristaCreate(BaseModel):
     name: str
     email: str
     phone_number: Optional[str] = None
+    bio: Optional[str] = None
     join_code: str
 
 class BaristaResponse(BaseModel):
@@ -71,6 +72,7 @@ class BaristaResponse(BaseModel):
     name: str
     email: str
     phone_number: Optional[str] = None
+    bio: Optional[str] = None
     cafe_id: int
 
     class Config:
