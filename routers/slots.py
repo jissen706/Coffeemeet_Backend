@@ -162,6 +162,38 @@ def delete_slot(
     db.commit()
 
 
+@router.patch("/slots/{slot_id}/edit", response_model=schemas.SlotResponse)
+def edit_slot(
+    slot_id: int,
+    body: schemas.SlotEdit,
+    user: dict = Depends(require_barista),
+    db: Session = Depends(get_db),
+):
+    slot = db.query(models.Slot).filter(models.Slot.id == slot_id).first()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+
+    if user.get("role") == "owner":
+        cafe = db.query(models.Cafe).filter(
+            models.Cafe.id == slot.cafe_id,
+            models.Cafe.owner_id == int(user["sub"]),
+        ).first()
+        if not cafe:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    else:
+        if slot.barista_id != int(user["sub"]):
+            raise HTTPException(status_code=403, detail="You can only edit your own slots")
+
+    if body.location is not None:
+        slot.location = body.location
+    if body.meet_link is not None:
+        slot.meet_link = body.meet_link
+
+    db.commit()
+    db.refresh(slot)
+    return slot
+
+
 @router.patch("/slots/{slot_id}/meet-link", response_model=schemas.SlotResponse)
 def update_meet_link(
     slot_id: int,

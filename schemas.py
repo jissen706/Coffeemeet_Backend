@@ -115,6 +115,10 @@ class SlotCreate(BaseModel):
 class SlotMeetLink(BaseModel):
     meet_link: str
 
+class SlotEdit(BaseModel):
+    location: Optional[str] = None
+    meet_link: Optional[str] = None
+
 class SlotBook(BaseModel):
     customer_id: int
 
