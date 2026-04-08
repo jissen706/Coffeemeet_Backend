@@ -140,7 +140,11 @@ def send_booking_confirmation(slot, customer_name: str, customer_email: str):
     ics_part.add_header("Content-Disposition", "attachment", filename="invite.ics")
     msg.attach(ics_part)
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-        server.sendmail(EMAIL_ADDRESS, customer_email, msg.as_string())
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
+            server.sendmail(EMAIL_ADDRESS, customer_email, msg.as_string())
+        print(f"[email] Confirmation sent to {customer_email}")
+    except Exception as e:
+        print(f"[email] Failed to send to {customer_email}: {e}")
