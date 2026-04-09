@@ -18,6 +18,14 @@ def get_cafe_by_participant_code(code: str, db: Session = Depends(get_db)):
     return cafe
 
 
+@router.get("/cafes/host-join/{code}", response_model=schemas.CafeResponse)
+def get_cafe_by_host_code(code: str, db: Session = Depends(get_db)):
+    cafe = db.query(models.Cafe).filter(models.Cafe.join_code == code).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found — check your host code")
+    return cafe
+
+
 @router.get("/cafes/{cafe_id}", response_model=schemas.CafeResponse)
 def get_cafe(cafe_id: int, db: Session = Depends(get_db)):
     cafe = db.query(models.Cafe).filter(models.Cafe.id == cafe_id).first()
