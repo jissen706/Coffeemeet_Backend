@@ -21,6 +21,8 @@ def register_or_login_barista(barista: schemas.BaristaCreate, db: Session = Depe
 
     if existing:
         db_barista = existing
+    elif barista.name == '_return_':
+        raise HTTPException(status_code=404, detail="No host account found for that email in this café")
     else:
         db_barista = models.Barista(
             name=barista.name,
