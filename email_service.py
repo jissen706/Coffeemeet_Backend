@@ -1,8 +1,9 @@
 import os
+import base64
 from datetime import timezone
 
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_ADDRESS  = os.environ.get("EMAIL_ADDRESS", "")   # e.g. coffeemeet@yourdomain.com
 
 
 def _build_ics(start_time, end_time, location, meet_link, host_name, host_email) -> str:
@@ -36,10 +37,10 @@ def _build_ics(start_time, end_time, location, meet_link, host_name, host_email)
 
 
 def _build_html(customer_name, host_name, start_time, end_time, location, meet_link) -> str:
-    date_str = start_time.strftime("%A, %B %-d, %Y")
+    date_str  = start_time.strftime("%A, %B %-d, %Y")
     start_str = start_time.strftime("%-I:%M %p")
-    end_str = end_time.strftime("%-I:%M %p")
-    location = location or "TBD"
+    end_str   = end_time.strftime("%-I:%M %p")
+    location  = location or "TBD"
     meet_link_html = ""
     if meet_link:
         meet_link_html = f"""
@@ -114,43 +115,37 @@ def send_booking_confirmation(
     host_name: str,
     host_email: str,
 ):
-    """Send a booking confirmation email with .ics attachment via SendGrid."""
-    if not SENDGRID_API_KEY or not EMAIL_ADDRESS:
-        print("[email] Skipped — SENDGRID_API_KEY or EMAIL_ADDRESS not set")
+    """Send a booking confirmation email with .ics attachment via Resend."""
+    if not RESEND_API_KEY or not EMAIL_ADDRESS:
+        print("[email] Skipped — RESEND_API_KEY or EMAIL_ADDRESS not set")
         return
 
     try:
-        import base64
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import (
-            Mail, Attachment, FileContent, FileName,
-            FileType, Disposition
-        )
+        import resend
+
+        resend.api_key = RESEND_API_KEY
 
         ics_bytes = _build_ics(
             start_time, end_time, location, meet_link, host_name, host_email
         ).encode("utf-8")
 
-        message = Mail(
-            from_email=(EMAIL_ADDRESS, "CoffeeMeet"),
-            to_emails=customer_email,
-            subject="Your coffee chat is confirmed ☕",
-            html_content=_build_html(
+        params = {
+            "from": f"CoffeeMeet <{EMAIL_ADDRESS}>",
+            "to": [customer_email],
+            "subject": "Your coffee chat is confirmed ☕",
+            "html": _build_html(
                 customer_name, host_name, start_time, end_time, location, meet_link
             ),
-        )
+            "attachments": [
+                {
+                    "filename": "invite.ics",
+                    "content": list(ics_bytes),
+                }
+            ],
+        }
 
-        attachment = Attachment(
-            FileContent(base64.b64encode(ics_bytes).decode()),
-            FileName("invite.ics"),
-            FileType("text/calendar"),
-            Disposition("attachment"),
-        )
-        message.attachment = attachment
-
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        print(f"[email] Sent to {customer_email} — status {response.status_code}")
+        response = resend.Emails.send(params)
+        print(f"[email] Sent to {customer_email} — id {response.get('id', '?')}")
 
     except Exception as e:
         print(f"[email] Failed to send to {customer_email}: {e}")
