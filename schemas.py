@@ -86,6 +86,9 @@ class CustomerCreate(BaseModel):
     name: str
     email: str
 
+class CustomerLookup(BaseModel):
+    email: str
+
 class CustomerResponse(BaseModel):
     id: int
     name: str

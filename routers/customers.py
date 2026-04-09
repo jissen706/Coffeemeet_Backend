@@ -49,6 +49,43 @@ def register_or_login_customer(
     }
 
 
+@router.post("/customers/lookup/{cafe_id}", response_model=schemas.TokenResponse)
+def lookup_customer_by_email(
+    cafe_id: int,
+    body: schemas.CustomerLookup,
+    db: Session = Depends(get_db),
+):
+    """Email-only login for returning participants (e.g. from email links)."""
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == cafe_id).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found")
+
+    customer = db.query(models.Customer).filter(
+        models.Customer.email == body.email,
+        models.Customer.cafe_id == cafe_id,
+    ).first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="No booking found for this email")
+
+    token = create_token({
+        "sub": str(customer.id),
+        "role": "customer",
+        "name": customer.name,
+        "cafe_id": customer.cafe_id,
+    })
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": customer.id,
+            "name": customer.name,
+            "role": "customer",
+            "cafe_id": customer.cafe_id,
+        },
+    }
+
+
 @router.delete("/customers/{customer_id}", status_code=204)
 def remove_customer(
     customer_id: int,

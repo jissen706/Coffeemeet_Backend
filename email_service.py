@@ -71,7 +71,7 @@ def _slot_table(date_str, start_str, end_str, location, host_name, meet_link) ->
 
 
 def _cancel_link_html(participant_code: str) -> str:
-    url = f"{FRONTEND_URL}/cafe/{participant_code}"
+    url = f"{FRONTEND_URL}/booking/{participant_code}"
     return f"""
             <div style="text-align:center;margin-top:28px;">
               <a href="{url}"
@@ -80,7 +80,7 @@ def _cancel_link_html(participant_code: str) -> str:
                 Manage my booking ↗
               </a>
               <p style="margin:10px 0 0;font-size:12px;color:#bbb;">
-                You can cancel your booking from this page.
+                View details or cancel your booking.
               </p>
             </div>"""
 
@@ -132,7 +132,7 @@ def _build_cancellation_html(customer_name, host_name, start_time, end_time, par
     date_str  = start_time.strftime("%A, %B %-d, %Y")
     start_str = start_time.strftime("%-I:%M %p")
     end_str   = end_time.strftime("%-I:%M %p")
-    rebook_url = f"{FRONTEND_URL}/cafe/{participant_code}" if participant_code else FRONTEND_URL
+    rebook_url = f"{FRONTEND_URL}/booking/{participant_code}" if participant_code else FRONTEND_URL
     body = f"""
             <p style="margin:0 0 8px;font-size:16px;color:#3b1f0f;">Hi {customer_name},</p>
             <p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.6;">
