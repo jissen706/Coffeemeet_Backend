@@ -2,8 +2,8 @@ import os
 import base64
 from datetime import timezone
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_ADDRESS  = os.environ.get("EMAIL_ADDRESS", "")   # e.g. coffeemeet@yourdomain.com
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS", "")
 
 
 def _build_ics(start_time, end_time, location, meet_link, host_name, host_email) -> str:
@@ -115,37 +115,44 @@ def send_booking_confirmation(
     host_name: str,
     host_email: str,
 ):
-    """Send a booking confirmation email with .ics attachment via Resend."""
-    if not RESEND_API_KEY or not EMAIL_ADDRESS:
-        print("[email] Skipped — RESEND_API_KEY or EMAIL_ADDRESS not set")
+    """Send a booking confirmation email with .ics attachment via Brevo."""
+    if not BREVO_API_KEY or not EMAIL_ADDRESS:
+        print("[email] Skipped — BREVO_API_KEY or EMAIL_ADDRESS not set")
         return
 
     try:
-        import resend
+        import sib_api_v3_sdk
+        from sib_api_v3_sdk.rest import ApiException
 
-        resend.api_key = RESEND_API_KEY
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key["api-key"] = BREVO_API_KEY
+
+        api = sib_api_v3_sdk.TransactionalEmailsApi(
+            sib_api_v3_sdk.ApiClient(configuration)
+        )
 
         ics_bytes = _build_ics(
             start_time, end_time, location, meet_link, host_name, host_email
         ).encode("utf-8")
+        ics_b64 = base64.b64encode(ics_bytes).decode()
 
-        params = {
-            "from": f"CoffeeMeet <{EMAIL_ADDRESS}>",
-            "to": [customer_email],
-            "subject": "Your coffee chat is confirmed ☕",
-            "html": _build_html(
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            sender={"name": "CoffeeMeet", "email": EMAIL_ADDRESS},
+            to=[{"email": customer_email, "name": customer_name}],
+            subject="Your coffee chat is confirmed ☕",
+            html_content=_build_html(
                 customer_name, host_name, start_time, end_time, location, meet_link
             ),
-            "attachments": [
+            attachment=[
                 {
-                    "filename": "invite.ics",
-                    "content": list(ics_bytes),
+                    "name": "invite.ics",
+                    "content": ics_b64,
                 }
             ],
-        }
+        )
 
-        response = resend.Emails.send(params)
-        print(f"[email] Sent to {customer_email} — id {response.get('id', '?')}")
+        response = api.send_transac_email(send_smtp_email)
+        print(f"[email] Sent to {customer_email} — messageId {response.message_id}")
 
     except Exception as e:
         print(f"[email] Failed to send to {customer_email}: {e}")

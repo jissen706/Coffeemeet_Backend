@@ -7,7 +7,7 @@ python-jose==3.5.0
 argon2-cffi==25.1.0
 python-dotenv==1.2.2
 psycopg2-binary==2.9.10
-resend==2.10.0
+sib-api-v3-sdk==7.6.0
 
 # Dev / test dependencies
 httpx==0.28.1
