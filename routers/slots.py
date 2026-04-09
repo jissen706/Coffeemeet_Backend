@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 from auth import require_barista, get_optional_user
-from email_service import send_booking_confirmation
+from email_service import send_booking_confirmation, send_cancellation_email, send_update_email
 
 router = APIRouter()
 
@@ -79,6 +79,7 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
     db.refresh(slot)
 
     # Snapshot all data needed for the email before the session closes
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
     email_data = {
         "customer_name": customer.name,
         "customer_email": customer.email,
@@ -88,6 +89,7 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
         "meet_link": slot.meet_link,
         "host_name": slot.barista.name if slot.barista else "Your Host",
         "host_email": slot.barista.email if slot.barista else "",
+        "participant_code": cafe.participant_code if cafe else "",
     }
     threading.Thread(
         target=send_booking_confirmation,
@@ -130,11 +132,31 @@ def unbook_slot(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Snapshot before clearing
+    customer = db.query(models.Customer).filter(models.Customer.id == slot.customer_id).first()
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
+    cancel_data = {
+        "customer_name": customer.name if customer else "",
+        "customer_email": customer.email if customer else "",
+        "start_time": slot.start_time,
+        "end_time": slot.end_time,
+        "host_name": slot.barista.name if slot.barista else "",
+        "participant_code": cafe.participant_code if cafe else "",
+    }
+
     slot.customer_id = None
     slot.status = "open"
     slot.meet_link = None
     db.commit()
     db.refresh(slot)
+
+    if cancel_data["customer_email"]:
+        threading.Thread(
+            target=send_cancellation_email,
+            kwargs=cancel_data,
+            daemon=True,
+        ).start()
+
     return slot
 
 
@@ -192,6 +214,26 @@ def edit_slot(
 
     db.commit()
     db.refresh(slot)
+
+    # Notify booked participant of the update
+    if slot.customer_id and slot.customer:
+        cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
+        update_data = {
+            "customer_name": slot.customer.name,
+            "customer_email": slot.customer.email,
+            "start_time": slot.start_time,
+            "end_time": slot.end_time,
+            "location": slot.location,
+            "meet_link": slot.meet_link,
+            "host_name": slot.barista.name if slot.barista else "",
+            "participant_code": cafe.participant_code if cafe else "",
+        }
+        threading.Thread(
+            target=send_update_email,
+            kwargs=update_data,
+            daemon=True,
+        ).start()
+
     return slot
 
 
