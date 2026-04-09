@@ -27,6 +27,14 @@ def create_slot(
     if not cafe:
         raise HTTPException(status_code=404, detail="Cafe not found")
 
+    # Verify the barista actually belongs to this cafe
+    barista = db.query(models.Barista).filter(
+        models.Barista.id == slot.barista_id,
+        models.Barista.cafe_id == slot.cafe_id,
+    ).first()
+    if not barista:
+        raise HTTPException(status_code=400, detail="Barista does not belong to this cafe")
+
     cafe_start = datetime.combine(cafe.start_date, datetime.min.time())
     cafe_end = datetime.combine(cafe.end_date, datetime.max.time())
     if slot.start_time < cafe_start or slot.end_time > cafe_end:
@@ -52,7 +60,8 @@ def create_slot(
 
 @router.put("/slots/{slot_id}/book", response_model=schemas.SlotResponse)
 def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get_db)):
-    slot = db.query(models.Slot).filter(models.Slot.id == slot_id).first()
+    # Use SELECT FOR UPDATE to prevent double-booking race condition
+    slot = db.query(models.Slot).filter(models.Slot.id == slot_id).with_for_update().first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 

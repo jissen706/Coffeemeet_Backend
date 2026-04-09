@@ -1,16 +1,17 @@
 import csv
 import io
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
-from auth import require_owner
+from auth import require_owner, require_barista
 
 router = APIRouter()
 
 
-@router.get("/cafes/join/{code}", response_model=schemas.CafeResponse)
+@router.get("/cafes/join/{code}", response_model=schemas.PublicCafeResponse)
 def get_cafe_by_participant_code(code: str, db: Session = Depends(get_db)):
     cafe = db.query(models.Cafe).filter(models.Cafe.participant_code == code).first()
     if not cafe:
@@ -36,9 +37,34 @@ def get_cafe(cafe_id: int, db: Session = Depends(get_db)):
 
 @router.get("/cafes/{cafe_id}/slots", response_model=list[schemas.SlotResponse])
 def get_slots(cafe_id: int, db: Session = Depends(get_db)):
+    """Public endpoint — customer email omitted from response."""
     cafe = db.query(models.Cafe).filter(models.Cafe.id == cafe_id).first()
     if not cafe:
         raise HTTPException(status_code=404, detail="Cafe not found")
+    return db.query(models.Slot).filter(models.Slot.cafe_id == cafe_id).all()
+
+
+@router.get("/cafes/{cafe_id}/host-slots", response_model=list[schemas.SlotResponseFull])
+def get_slots_for_host(
+    cafe_id: int,
+    user: dict = Depends(require_barista),
+    db: Session = Depends(get_db),
+):
+    """Authenticated endpoint for hosts/owners — includes customer email."""
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == cafe_id).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found")
+    # Owners must own this cafe; baristas must belong to it
+    if user.get("role") == "owner":
+        if cafe.owner_id != int(user["sub"]):
+            raise HTTPException(status_code=403, detail="Not authorized")
+    else:
+        barista = db.query(models.Barista).filter(
+            models.Barista.id == int(user["sub"]),
+            models.Barista.cafe_id == cafe_id,
+        ).first()
+        if not barista:
+            raise HTTPException(status_code=403, detail="Not authorized")
     return db.query(models.Slot).filter(models.Slot.cafe_id == cafe_id).all()
 
 
@@ -134,6 +160,11 @@ def create_cafe(
     owner: dict = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
+    if cafe.end_date < cafe.start_date:
+        raise HTTPException(status_code=400, detail="End date must be on or after start date")
+    if cafe.start_date < date.today():
+        raise HTTPException(status_code=400, detail="Start date cannot be in the past")
+
     owner_id = int(owner["sub"])
     db_owner = db.query(models.Owner).filter(models.Owner.id == owner_id).first()
     if not db_owner:
@@ -174,6 +205,9 @@ def update_cafe(
         cafe.end_date = updates.end_date
     if updates.one_slot is not None:
         cafe.one_slot = updates.one_slot
+
+    if cafe.end_date < cafe.start_date:
+        raise HTTPException(status_code=400, detail="End date must be on or after start date")
 
     db.commit()
     db.refresh(cafe)

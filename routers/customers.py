@@ -103,12 +103,11 @@ def remove_customer(
     if not cafe:
         raise HTTPException(status_code=403, detail="Not authorized to modify this cafe")
 
-    # Unbook any slots this customer has booked
+    # Unbook any slots this customer has booked — meet_link is preserved for the barista
     booked_slots = db.query(models.Slot).filter(models.Slot.customer_id == customer_id).all()
     for slot in booked_slots:
         slot.customer_id = None
         slot.status = "open"
-        slot.meet_link = None
 
     db.delete(customer)
     db.commit()

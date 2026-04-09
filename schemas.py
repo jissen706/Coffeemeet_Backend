@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, Any
 
 
@@ -59,6 +59,19 @@ class CafeResponse(BaseModel):
         from_attributes = True
 
 
+class PublicCafeResponse(BaseModel):
+    """Returned on participant-facing public endpoints — join_code is omitted."""
+    id: int
+    name: str
+    start_date: date
+    end_date: date
+    one_slot: bool
+    participant_code: str
+
+    class Config:
+        from_attributes = True
+
+
 # ── Barista ────────────────────────────────────────────────────────────────────
 
 class BaristaCreate(BaseModel):
@@ -102,6 +115,16 @@ class CustomerResponse(BaseModel):
 # ── Slot ───────────────────────────────────────────────────────────────────────
 
 class SlotCustomerResponse(BaseModel):
+    """Used in public slot endpoints — email omitted to protect customer privacy."""
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class SlotCustomerResponseFull(BaseModel):
+    """Used in host-authenticated slot endpoints — includes email."""
     id: int
     name: str
     email: str
@@ -109,6 +132,17 @@ class SlotCustomerResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+
+def _validate_meet_link(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    v = v.strip()
+    if not v:
+        return None
+    if not (v.startswith("http://") or v.startswith("https://")):
+        raise ValueError("Virtual meeting link must start with http:// or https://")
+    return v
 
 
 class SlotCreate(BaseModel):
@@ -119,12 +153,27 @@ class SlotCreate(BaseModel):
     barista_id: int
     meet_link: Optional[str] = None
 
+    @field_validator("meet_link", mode="before")
+    @classmethod
+    def validate_meet_link(cls, v):
+        return _validate_meet_link(v)
+
 class SlotMeetLink(BaseModel):
     meet_link: str
+
+    @field_validator("meet_link", mode="before")
+    @classmethod
+    def validate_meet_link(cls, v):
+        return _validate_meet_link(v)
 
 class SlotEdit(BaseModel):
     location: Optional[str] = None
     meet_link: Optional[str] = None
+
+    @field_validator("meet_link", mode="before")
+    @classmethod
+    def validate_meet_link(cls, v):
+        return _validate_meet_link(v)
 
 class SlotBook(BaseModel):
     customer_id: int
@@ -139,6 +188,22 @@ class SlotResponse(BaseModel):
     status: str
     barista: BaristaResponse
     customer: Optional[SlotCustomerResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SlotResponseFull(BaseModel):
+    """Returned by host-authenticated endpoints — customer email included."""
+    id: int
+    cafe_id: int
+    start_time: datetime
+    end_time: datetime
+    location: str
+    meet_link: Optional[str] = None
+    status: str
+    barista: BaristaResponse
+    customer: Optional[SlotCustomerResponseFull] = None
 
     class Config:
         from_attributes = True
