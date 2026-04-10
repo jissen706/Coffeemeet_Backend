@@ -38,12 +38,14 @@ class CafeCreate(BaseModel):
     start_date: date
     end_date: date
     one_slot: bool
+    description: Optional[str] = None
 
 class CafeUpdate(BaseModel):
     name: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     one_slot: Optional[bool] = None
+    description: Optional[str] = None
 
 class CafeResponse(BaseModel):
     id: int
@@ -54,6 +56,7 @@ class CafeResponse(BaseModel):
     join_code: str
     participant_code: str
     owner_id: int
+    description: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -67,6 +70,7 @@ class PublicCafeResponse(BaseModel):
     end_date: date
     one_slot: bool
     participant_code: str
+    description: Optional[str] = None
 
     class Config:
         from_attributes = True

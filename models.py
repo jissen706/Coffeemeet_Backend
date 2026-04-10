@@ -19,6 +19,7 @@ class Cafe(Base):
     join_code = Column(String, unique=True, default=generate_cafe_code)          # host-only
     participant_code = Column(String, unique=True, default=generate_cafe_code)  # participant-only
     one_slot = Column(Boolean, default=True)
+    description = Column(String, nullable=True)
 
     owner_id = Column(Integer, ForeignKey("owners.id"))
     owner = relationship("Owner", back_populates="cafes")

@@ -176,6 +176,7 @@ def create_cafe(
         end_date=cafe.end_date,
         owner_id=owner_id,
         one_slot=cafe.one_slot,
+        description=cafe.description or None,
     )
     db.add(db_cafe)
     db.commit()
@@ -205,6 +206,8 @@ def update_cafe(
         cafe.end_date = updates.end_date
     if updates.one_slot is not None:
         cafe.one_slot = updates.one_slot
+    if updates.description is not None:
+        cafe.description = updates.description or None
 
     if cafe.end_date < cafe.start_date:
         raise HTTPException(status_code=400, detail="End date must be on or after start date")
