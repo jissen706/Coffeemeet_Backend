@@ -15,6 +15,7 @@ from sqlalchemy import text
 with engine.connect() as _conn:
     _conn.execute(text("ALTER TABLE baristas ADD COLUMN IF NOT EXISTS bio TEXT"))
     _conn.execute(text("ALTER TABLE cafes ADD COLUMN IF NOT EXISTS participant_code VARCHAR"))
+    _conn.execute(text("ALTER TABLE slots ADD COLUMN IF NOT EXISTS notes TEXT"))
     # Backfill existing cafes that have no participant_code yet
     _conn.execute(text("""
         UPDATE cafes

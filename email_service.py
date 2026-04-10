@@ -37,7 +37,7 @@ def _build_ics(start_time, end_time, location, meet_link, host_name, host_email)
     return "\r\n".join(lines)
 
 
-def _slot_table(date_str, start_str, end_str, location, host_name, meet_link) -> str:
+def _slot_table(date_str, start_str, end_str, location, host_name, meet_link, notes=None) -> str:
     meet_row = ""
     if meet_link:
         meet_row = f"""
@@ -46,6 +46,13 @@ def _slot_table(date_str, start_str, end_str, location, host_name, meet_link) ->
                 <td style="padding:8px 0;font-size:14px;">
                   <a href="{meet_link}" style="color:#c8773a;">Join virtual meeting ↗</a>
                 </td>
+              </tr>"""
+    notes_row = ""
+    if notes:
+        notes_row = f"""
+              <tr>
+                <td style="padding:8px 0;color:#888;font-size:14px;vertical-align:top;">Notes</td>
+                <td style="padding:8px 0;font-size:14px;color:#3b1f0f;line-height:1.5;">{notes}</td>
               </tr>"""
     return f"""
             <table width="100%" cellpadding="0" cellspacing="0"
@@ -67,6 +74,7 @@ def _slot_table(date_str, start_str, end_str, location, host_name, meet_link) ->
                 <td style="padding:8px 0;font-size:14px;color:#3b1f0f;">{host_name}</td>
               </tr>
               {meet_row}
+              {notes_row}
             </table>"""
 
 
@@ -109,7 +117,7 @@ def _email_wrapper(header_label: str, body_html: str) -> str:
 </html>"""
 
 
-def _build_html(customer_name, host_name, start_time, end_time, location, meet_link, participant_code="") -> str:
+def _build_html(customer_name, host_name, start_time, end_time, location, meet_link, notes=None, participant_code="") -> str:
     date_str  = start_time.strftime("%A, %B %-d, %Y")
     start_str = start_time.strftime("%-I:%M %p")
     end_str   = end_time.strftime("%-I:%M %p")
@@ -120,7 +128,7 @@ def _build_html(customer_name, host_name, start_time, end_time, location, meet_l
               Your coffee chat with <strong style="color:#3b1f0f;">{host_name}</strong> is confirmed.
               A calendar invite is attached — add it to your calendar so you don't miss it.
             </p>
-            {_slot_table(date_str, start_str, end_str, location, host_name, meet_link)}
+            {_slot_table(date_str, start_str, end_str, location, host_name, meet_link, notes)}
             {_cancel_link_html(participant_code) if participant_code else ""}
             <p style="margin:28px 0 0;font-size:13px;color:#aaa;text-align:center;">
               Sent by CoffeeMeet &middot; Add the .ics attachment to your calendar
@@ -152,7 +160,7 @@ def _build_cancellation_html(customer_name, host_name, start_time, end_time, par
     return _email_wrapper("Booking cancelled", body)
 
 
-def _build_update_html(customer_name, host_name, start_time, end_time, location, meet_link, participant_code="") -> str:
+def _build_update_html(customer_name, host_name, start_time, end_time, location, meet_link, notes=None, participant_code="") -> str:
     date_str  = start_time.strftime("%A, %B %-d, %Y")
     start_str = start_time.strftime("%-I:%M %p")
     end_str   = end_time.strftime("%-I:%M %p")
@@ -163,7 +171,7 @@ def _build_update_html(customer_name, host_name, start_time, end_time, location,
               Your upcoming coffee chat with <strong style="color:#3b1f0f;">{host_name}</strong>
               has been updated. Here are the latest details:
             </p>
-            {_slot_table(date_str, start_str, end_str, location, host_name, meet_link)}
+            {_slot_table(date_str, start_str, end_str, location, host_name, meet_link, notes)}
             {_cancel_link_html(participant_code) if participant_code else ""}
             <p style="margin:28px 0 0;font-size:13px;color:#aaa;text-align:center;">
               Sent by CoffeeMeet
@@ -203,6 +211,7 @@ def send_booking_confirmation(
     meet_link: str,
     host_name: str,
     host_email: str,
+    notes: str = "",
     participant_code: str = "",
 ):
     if not BREVO_API_KEY or not EMAIL_ADDRESS:
@@ -210,7 +219,7 @@ def send_booking_confirmation(
         return
     try:
         ics = _build_ics(start_time, end_time, location, meet_link, host_name, host_email).encode()
-        html = _build_html(customer_name, host_name, start_time, end_time, location, meet_link, participant_code)
+        html = _build_html(customer_name, host_name, start_time, end_time, location, meet_link, notes or None, participant_code)
         _send(customer_email, customer_name, "Your coffee chat is confirmed ☕", html, ics)
     except Exception as e:
         print(f"[email] Failed to send to {customer_email}: {e}")
@@ -241,12 +250,13 @@ def send_update_email(
     location: str,
     meet_link: str,
     host_name: str,
+    notes: str = "",
     participant_code: str = "",
 ):
     if not BREVO_API_KEY or not EMAIL_ADDRESS:
         return
     try:
-        html = _build_update_html(customer_name, host_name, start_time, end_time, location, meet_link, participant_code)
+        html = _build_update_html(customer_name, host_name, start_time, end_time, location, meet_link, notes or None, participant_code)
         _send(customer_email, customer_name, "Your coffee chat details have been updated ☕", html)
     except Exception as e:
         print(f"[email] Failed update email to {customer_email}: {e}")

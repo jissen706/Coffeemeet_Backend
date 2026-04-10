@@ -152,6 +152,7 @@ class SlotCreate(BaseModel):
     location: str
     barista_id: int
     meet_link: Optional[str] = None
+    notes: Optional[str] = None
 
     @field_validator("meet_link", mode="before")
     @classmethod
@@ -169,6 +170,7 @@ class SlotMeetLink(BaseModel):
 class SlotEdit(BaseModel):
     location: Optional[str] = None
     meet_link: Optional[str] = None
+    notes: Optional[str] = None
 
     @field_validator("meet_link", mode="before")
     @classmethod
@@ -185,6 +187,7 @@ class SlotResponse(BaseModel):
     end_time: datetime
     location: str
     meet_link: Optional[str] = None
+    notes: Optional[str] = None
     status: str
     barista: BaristaResponse
     customer: Optional[SlotCustomerResponse] = None
@@ -201,6 +204,7 @@ class SlotResponseFull(BaseModel):
     end_time: datetime
     location: str
     meet_link: Optional[str] = None
+    notes: Optional[str] = None
     status: str
     barista: BaristaResponse
     customer: Optional[SlotCustomerResponseFull] = None

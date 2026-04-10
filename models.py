@@ -33,6 +33,7 @@ class Slot(Base):
     end_time = Column(DateTime)
     location = Column(String, nullable=True)
     meet_link = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
     status = Column(String, default="open")
 
     cafe_id = Column(Integer, ForeignKey("cafes.id"))

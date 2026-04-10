@@ -48,6 +48,7 @@ def create_slot(
         end_time=slot.end_time,
         location=slot.location,
         meet_link=slot.meet_link,
+        notes=slot.notes,
         cafe_id=slot.cafe_id,
         barista_id=slot.barista_id,
         status="open",
@@ -98,6 +99,7 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
         "meet_link": slot.meet_link,
         "host_name": slot.barista.name if slot.barista else "Your Host",
         "host_email": slot.barista.email if slot.barista else "",
+        "notes": slot.notes or "",
         "participant_code": cafe.participant_code if cafe else "",
     }
     threading.Thread(
@@ -220,6 +222,8 @@ def edit_slot(
         slot.location = body.location
     if body.meet_link is not None:
         slot.meet_link = body.meet_link
+    if body.notes is not None:
+        slot.notes = body.notes
 
     db.commit()
     db.refresh(slot)
@@ -235,6 +239,7 @@ def edit_slot(
             "location": slot.location,
             "meet_link": slot.meet_link,
             "host_name": slot.barista.name if slot.barista else "",
+            "notes": slot.notes or "",
             "participant_code": cafe.participant_code if cafe else "",
         }
         threading.Thread(
