@@ -10,6 +10,22 @@ from email_service import send_booking_confirmation, send_cancellation_email, se
 router = APIRouter()
 
 
+def _customer_already_booked_in_cafe(db: Session, cafe_id: int, customer_id: int) -> bool:
+    """True if this customer holds a booking on any slot in this cafe."""
+    return db.query(models.SlotBooking).join(
+        models.Slot, models.Slot.id == models.SlotBooking.slot_id
+    ).filter(
+        models.Slot.cafe_id == cafe_id,
+        models.SlotBooking.customer_id == customer_id,
+    ).first() is not None
+
+
+def _refresh_slot_status(slot: models.Slot, cafe: models.Cafe) -> None:
+    """Set slot.status to 'booked' iff the slot is at capacity."""
+    cap = cafe.max_participants if cafe else 1
+    slot.status = "booked" if len(slot.bookings) >= cap else "open"
+
+
 @router.post("/slots", response_model=schemas.SlotResponse)
 def create_slot(
     slot: schemas.SlotCreate,
@@ -61,35 +77,37 @@ def create_slot(
 
 @router.put("/slots/{slot_id}/book", response_model=schemas.SlotResponse)
 def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get_db)):
-    # Use SELECT FOR UPDATE to prevent double-booking race condition
+    # Use SELECT FOR UPDATE to prevent racing past capacity
     slot = db.query(models.Slot).filter(models.Slot.id == slot_id).with_for_update().first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    if slot.customer_id is not None:
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found")
+
+    cap = cafe.max_participants or 1
+    if len(slot.bookings) >= cap:
         raise HTTPException(status_code=400, detail="Slot is already booked")
 
     customer = db.query(models.Customer).filter(models.Customer.id == booking.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
-    if cafe and cafe.one_slot:
-        already_booked = db.query(models.Slot).filter(
-            models.Slot.cafe_id == slot.cafe_id,
-            models.Slot.customer_id == booking.customer_id,
-            models.Slot.status == "booked",
-        ).first()
-        if already_booked:
-            raise HTTPException(status_code=400, detail="You already have a booking in this cafe")
+    # Reject if this customer is already on this slot
+    if any(b.customer_id == booking.customer_id for b in slot.bookings):
+        raise HTTPException(status_code=400, detail="You're already booked on this slot")
 
-    slot.customer_id = booking.customer_id
-    slot.status = "booked"
+    if cafe.one_slot and _customer_already_booked_in_cafe(db, cafe.id, booking.customer_id):
+        raise HTTPException(status_code=400, detail="You already have a booking in this cafe")
+
+    db.add(models.SlotBooking(slot_id=slot.id, customer_id=booking.customer_id))
+    db.flush()
+    db.refresh(slot)
+    _refresh_slot_status(slot, cafe)
     db.commit()
     db.refresh(slot)
 
-    # Snapshot all data needed for the email before the session closes
-    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
     email_data = {
         "customer_name": customer.name,
         "customer_email": customer.email,
@@ -100,7 +118,7 @@ def book_slot(slot_id: int, booking: schemas.SlotBook, db: Session = Depends(get
         "host_name": slot.barista.name if slot.barista else "Your Host",
         "host_email": slot.barista.email if slot.barista else "",
         "notes": slot.notes or "",
-        "participant_code": cafe.participant_code if cafe else "",
+        "participant_code": cafe.participant_code or "",
     }
     threading.Thread(
         target=send_booking_confirmation,
@@ -124,49 +142,63 @@ def unbook_slot(
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    if slot.customer_id is None:
+    if not slot.bookings:
         raise HTTPException(status_code=400, detail="Slot is not booked")
 
-    if user.get("role") == "owner":
-        cafe = db.query(models.Cafe).filter(
-            models.Cafe.id == slot.cafe_id,
-            models.Cafe.owner_id == int(user["sub"]),
-        ).first()
-        if not cafe:
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
+
+    # Determine which booking(s) we're cancelling.
+    # Customers cancel only their own; hosts/owners cancel everyone on the slot.
+    role = user.get("role")
+    user_id = int(user["sub"])
+
+    if role == "owner":
+        if not cafe or cafe.owner_id != user_id:
             raise HTTPException(status_code=403, detail="Not authorized")
-    elif user.get("role") == "customer":
-        if slot.customer_id != int(user["sub"]):
+        bookings_to_cancel = list(slot.bookings)
+    elif role == "customer":
+        bookings_to_cancel = [b for b in slot.bookings if b.customer_id == user_id]
+        if not bookings_to_cancel:
             raise HTTPException(status_code=403, detail="You can only unbook your own slot")
-    elif user.get("role") == "barista":
-        if slot.barista_id != int(user["sub"]):
+    elif role == "barista":
+        if slot.barista_id != user_id:
             raise HTTPException(status_code=403, detail="You can only unbook slots you created")
+        bookings_to_cancel = list(slot.bookings)
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Snapshot before clearing
-    customer = db.query(models.Customer).filter(models.Customer.id == slot.customer_id).first()
-    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
-    cancel_data = {
-        "customer_name": customer.name if customer else "",
-        "customer_email": customer.email if customer else "",
-        "start_time": slot.start_time,
-        "end_time": slot.end_time,
-        "host_name": slot.barista.name if slot.barista else "",
-        "participant_code": cafe.participant_code if cafe else "",
-    }
+    # Snapshot emails before deletion
+    cancel_targets = []
+    for b in bookings_to_cancel:
+        if b.customer:
+            cancel_targets.append({
+                "customer_name": b.customer.name,
+                "customer_email": b.customer.email,
+                "start_time": slot.start_time,
+                "end_time": slot.end_time,
+                "host_name": slot.barista.name if slot.barista else "",
+                "participant_code": cafe.participant_code if cafe else "",
+            })
+        db.delete(b)
 
-    slot.customer_id = None
-    slot.status = "open"
-    slot.meet_link = None
+    db.flush()
+    db.refresh(slot)
+
+    # Clear meet link if everyone left
+    if not slot.bookings:
+        slot.meet_link = None
+
+    _refresh_slot_status(slot, cafe)
     db.commit()
     db.refresh(slot)
 
-    if cancel_data["customer_email"]:
-        threading.Thread(
-            target=send_cancellation_email,
-            kwargs=cancel_data,
-            daemon=True,
-        ).start()
+    for data in cancel_targets:
+        if data["customer_email"]:
+            threading.Thread(
+                target=send_cancellation_email,
+                kwargs=data,
+                daemon=True,
+            ).start()
 
     return slot
 
@@ -228,25 +260,28 @@ def edit_slot(
     db.commit()
     db.refresh(slot)
 
-    # Notify booked participant of the update
-    if slot.customer_id and slot.customer:
+    # Notify every booked participant of the update
+    if slot.bookings:
         cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
-        update_data = {
-            "customer_name": slot.customer.name,
-            "customer_email": slot.customer.email,
-            "start_time": slot.start_time,
-            "end_time": slot.end_time,
-            "location": slot.location,
-            "meet_link": slot.meet_link,
-            "host_name": slot.barista.name if slot.barista else "",
-            "notes": slot.notes or "",
-            "participant_code": cafe.participant_code if cafe else "",
-        }
-        threading.Thread(
-            target=send_update_email,
-            kwargs=update_data,
-            daemon=True,
-        ).start()
+        for b in slot.bookings:
+            if not b.customer:
+                continue
+            update_data = {
+                "customer_name": b.customer.name,
+                "customer_email": b.customer.email,
+                "start_time": slot.start_time,
+                "end_time": slot.end_time,
+                "location": slot.location,
+                "meet_link": slot.meet_link,
+                "host_name": slot.barista.name if slot.barista else "",
+                "notes": slot.notes or "",
+                "participant_code": cafe.participant_code if cafe else "",
+            }
+            threading.Thread(
+                target=send_update_email,
+                kwargs=update_data,
+                daemon=True,
+            ).start()
 
     return slot
 
@@ -262,7 +297,7 @@ def update_meet_link(
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    if slot.customer_id is None:
+    if not slot.bookings:
         raise HTTPException(status_code=400, detail="Cannot add a meet link to an unbooked slot")
 
     # Owners can update any slot in their cafe; baristas only their own slots

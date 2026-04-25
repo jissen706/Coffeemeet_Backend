@@ -130,10 +130,12 @@ try:
                 location=loc,
                 cafe_id=cafe.id,
                 barista_id=baristas[bi].id,
-                customer_id=customers[ci].id if ci is not None else None,
                 status="open" if ci is None else "booked",
             )
             db.add(slot)
+            db.flush()
+            if ci is not None:
+                db.add(models.SlotBooking(slot_id=slot.id, customer_id=customers[ci].id))
         db.commit()
         print(f"Created {len(slots_def)} slots")
     else:

@@ -109,12 +109,13 @@ def export_cafe_data(
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Section 1: Bookings
+    # Section 1: Bookings — one row per (slot, participant). Empty slots produce
+    # one row with blank participant fields so admins can still see open slots.
     writer.writerow(["=== BOOKINGS ==="])
     writer.writerow(["Date", "Start Time", "End Time", "Location", "Status", "Virtual Meeting Link",
                      "Host Name", "Host Email", "Participant Name", "Participant Email"])
     for slot in sorted(slots, key=lambda s: s.start_time):
-        writer.writerow([
+        base = [
             slot.start_time.strftime("%Y-%m-%d"),
             slot.start_time.strftime("%H:%M"),
             slot.end_time.strftime("%H:%M"),
@@ -123,9 +124,15 @@ def export_cafe_data(
             slot.meet_link or "",
             slot.barista.name if slot.barista else "",
             slot.barista.email if slot.barista else "",
-            slot.customer.name if slot.customer else "",
-            slot.customer.email if slot.customer else "",
-        ])
+        ]
+        if slot.bookings:
+            for b in slot.bookings:
+                writer.writerow(base + [
+                    b.customer.name if b.customer else "",
+                    b.customer.email if b.customer else "",
+                ])
+        else:
+            writer.writerow(base + ["", ""])
 
     writer.writerow([])
 
@@ -177,6 +184,7 @@ def create_cafe(
         owner_id=owner_id,
         one_slot=cafe.one_slot,
         description=cafe.description or None,
+        max_participants=cafe.max_participants or 1,
     )
     db.add(db_cafe)
     db.commit()
@@ -208,6 +216,8 @@ def update_cafe(
         cafe.one_slot = updates.one_slot
     if updates.description is not None:
         cafe.description = updates.description or None
+    if updates.max_participants is not None:
+        cafe.max_participants = updates.max_participants
 
     if cafe.end_date < cafe.start_date:
         raise HTTPException(status_code=400, detail="End date must be on or after start date")

@@ -103,11 +103,19 @@ def remove_customer(
     if not cafe:
         raise HTTPException(status_code=403, detail="Not authorized to modify this cafe")
 
-    # Unbook any slots this customer has booked — meet_link is preserved for the barista
-    booked_slots = db.query(models.Slot).filter(models.Slot.customer_id == customer_id).all()
-    for slot in booked_slots:
-        slot.customer_id = None
-        slot.status = "open"
+    # Unbook any slots this customer has booked — meet_link is preserved for the barista.
+    # Cascade on the customer relationship would delete the bookings, but we also need to
+    # roll the slot back to "open" if removing this customer drops it below capacity.
+    affected_slot_ids = {b.slot_id for b in customer.bookings}
+    for b in list(customer.bookings):
+        db.delete(b)
+    db.flush()
+
+    if affected_slot_ids:
+        slots = db.query(models.Slot).filter(models.Slot.id.in_(affected_slot_ids)).all()
+        for slot in slots:
+            cap = slot.cafe.max_participants if slot.cafe else 1
+            slot.status = "booked" if len(slot.bookings) >= cap else "open"
 
     db.delete(customer)
     db.commit()

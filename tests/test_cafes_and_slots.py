@@ -222,6 +222,65 @@ def test_get_owner_cafes_wrong_owner_denied(client):
     assert res.status_code == 403
 
 
+def test_group_chat_capacity(client):
+    """A cafe with max_participants=3 keeps slots open until the 3rd booking lands."""
+    _, owner_token = make_owner(client, "groupowner@test.com")
+    res = client.post(
+        "/cafes",
+        json={
+            "name": "Group Cafe",
+            "start_date": "2030-02-01",
+            "end_date": "2030-02-28",
+            "one_slot": False,
+            "max_participants": 3,
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert res.status_code == 200
+    cafe = res.json()
+    assert cafe["max_participants"] == 3
+
+    barista = join_barista(client, cafe["join_code"], "groupbar@test.com")
+    barista_token = barista["access_token"]
+    barista_id = barista["user"]["id"]
+
+    slot = client.post(
+        "/slots",
+        json={
+            "cafe_id": cafe["id"], "barista_id": barista_id,
+            "start_time": "2030-02-10T09:00:00", "end_time": "2030-02-10T10:00:00",
+            "location": "Big Table",
+        },
+        headers={"Authorization": f"Bearer {barista_token}"},
+    ).json()
+
+    customer_ids = []
+    for i in range(3):
+        c = join_customer(client, cafe["id"], f"groupc{i}@test.com")
+        customer_ids.append(c["user"]["id"])
+
+    # First two bookings keep the slot open with shrinking spots_left.
+    r1 = client.put(f"/slots/{slot['id']}/book", json={"customer_id": customer_ids[0]})
+    assert r1.status_code == 200
+    assert r1.json()["status"] == "open"
+    assert r1.json()["spots_left"] == 2
+
+    r2 = client.put(f"/slots/{slot['id']}/book", json={"customer_id": customer_ids[1]})
+    assert r2.json()["status"] == "open"
+    assert r2.json()["spots_left"] == 1
+
+    # Third fills it — flips to booked.
+    r3 = client.put(f"/slots/{slot['id']}/book", json={"customer_id": customer_ids[2]})
+    assert r3.json()["status"] == "booked"
+    assert r3.json()["spots_left"] == 0
+    assert len(r3.json()["customers"]) == 3
+
+    # Fourth attempt is rejected.
+    extra = join_customer(client, cafe["id"], "groupc_extra@test.com")
+    r4 = client.put(f"/slots/{slot['id']}/book", json={"customer_id": extra["user"]["id"]})
+    assert r4.status_code == 400
+
+
 def test_barista_cannot_create_slot_for_other_barista(client):
     _, token = make_owner(client, "slotauth@test.com")
     cafe = make_cafe(client, token)

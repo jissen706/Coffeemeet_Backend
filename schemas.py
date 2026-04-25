@@ -1,6 +1,6 @@
 from datetime import datetime, date
-from pydantic import BaseModel, field_validator
-from typing import Optional, Any
+from pydantic import BaseModel, field_validator, Field
+from typing import Optional, Any, List
 
 
 # ── Owner ──────────────────────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ class CafeCreate(BaseModel):
     end_date: date
     one_slot: bool
     description: Optional[str] = None
+    max_participants: int = Field(default=1, ge=1, le=100)
 
 class CafeUpdate(BaseModel):
     name: Optional[str] = None
@@ -46,6 +47,7 @@ class CafeUpdate(BaseModel):
     end_date: Optional[date] = None
     one_slot: Optional[bool] = None
     description: Optional[str] = None
+    max_participants: Optional[int] = Field(default=None, ge=1, le=100)
 
 class CafeResponse(BaseModel):
     id: int
@@ -57,6 +59,7 @@ class CafeResponse(BaseModel):
     participant_code: str
     owner_id: int
     description: Optional[str] = None
+    max_participants: int = 1
 
     class Config:
         from_attributes = True
@@ -71,6 +74,7 @@ class PublicCafeResponse(BaseModel):
     one_slot: bool
     participant_code: str
     description: Optional[str] = None
+    max_participants: int = 1
 
     class Config:
         from_attributes = True
@@ -194,7 +198,9 @@ class SlotResponse(BaseModel):
     notes: Optional[str] = None
     status: str
     barista: BaristaResponse
-    customer: Optional[SlotCustomerResponse] = None
+    customers: List[SlotCustomerResponse] = []
+    max_participants: int = 1
+    spots_left: int = 0
 
     class Config:
         from_attributes = True
@@ -211,7 +217,9 @@ class SlotResponseFull(BaseModel):
     notes: Optional[str] = None
     status: str
     barista: BaristaResponse
-    customer: Optional[SlotCustomerResponseFull] = None
+    customers: List[SlotCustomerResponseFull] = []
+    max_participants: int = 1
+    spots_left: int = 0
 
     class Config:
         from_attributes = True
