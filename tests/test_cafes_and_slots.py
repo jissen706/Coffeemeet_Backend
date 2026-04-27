@@ -222,6 +222,92 @@ def test_get_owner_cafes_wrong_owner_denied(client):
     assert res.status_code == 403
 
 
+def test_manual_slot_creates_and_books(client):
+    """Owner creates a manual slot AND books two participants in one call."""
+    _, owner_token = make_owner(client, "manualowner@test.com")
+    cafe_res = client.post(
+        "/cafes",
+        json={
+            "name": "Manual Cafe",
+            "start_date": "2030-03-01",
+            "end_date": "2030-03-31",
+            "one_slot": True,
+            "max_participants": 2,
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    cafe = cafe_res.json()
+
+    barista = join_barista(client, cafe["join_code"], "manbar@test.com")
+    c1 = join_customer(client, cafe["id"], "manc1@test.com")
+    c2 = join_customer(client, cafe["id"], "manc2@test.com")
+
+    res = client.post(
+        "/slots/manual",
+        json={
+            "cafe_id": cafe["id"],
+            "barista_id": barista["user"]["id"],
+            "customer_ids": [c1["user"]["id"], c2["user"]["id"]],
+            "start_time": "2030-03-15T10:00:00",
+            "end_time": "2030-03-15T10:30:00",
+            "location": "Big Table",
+            "notes": "Rescheduled from earlier",
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert res.status_code == 200, res.text
+    slot = res.json()
+    assert slot["status"] == "booked"  # at capacity
+    assert slot["spots_left"] == 0
+    assert slot["max_participants"] == 2
+    assert {c["id"] for c in slot["customers"]} == {c1["user"]["id"], c2["user"]["id"]}
+    assert slot["notes"] == "Rescheduled from earlier"
+
+
+def test_manual_slot_rejects_other_owners(client):
+    _, owner_a = make_owner(client, "manown_a@test.com")
+    _, owner_b = make_owner(client, "manown_b@test.com")
+    cafe = make_cafe(client, owner_a, name="Manual Auth Cafe")
+    barista = join_barista(client, cafe["join_code"], "manbar2@test.com")
+    cust = join_customer(client, cafe["id"], "manc3@test.com")
+
+    res = client.post(
+        "/slots/manual",
+        json={
+            "cafe_id": cafe["id"],
+            "barista_id": barista["user"]["id"],
+            "customer_ids": [cust["user"]["id"]],
+            "start_time": "2030-01-15T09:00:00",
+            "end_time": "2030-01-15T09:30:00",
+            "location": "Counter",
+        },
+        headers={"Authorization": f"Bearer {owner_b}"},
+    )
+    assert res.status_code in (403, 404)
+
+
+def test_manual_slot_caps_at_max_participants(client):
+    _, owner_token = make_owner(client, "mancap@test.com")
+    cafe = make_cafe(client, owner_token, name="Cap Cafe")  # default max_participants=1
+    barista = join_barista(client, cafe["join_code"], "mancapbar@test.com")
+    c1 = join_customer(client, cafe["id"], "mancapc1@test.com")
+    c2 = join_customer(client, cafe["id"], "mancapc2@test.com")
+
+    res = client.post(
+        "/slots/manual",
+        json={
+            "cafe_id": cafe["id"],
+            "barista_id": barista["user"]["id"],
+            "customer_ids": [c1["user"]["id"], c2["user"]["id"]],
+            "start_time": "2030-01-20T10:00:00",
+            "end_time": "2030-01-20T10:30:00",
+            "location": "Counter",
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert res.status_code == 400
+
+
 def test_group_chat_capacity(client):
     """A cafe with max_participants=3 keeps slots open until the 3rd booking lands."""
     _, owner_token = make_owner(client, "groupowner@test.com")

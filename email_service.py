@@ -242,6 +242,47 @@ def send_cancellation_email(
         print(f"[email] Failed cancellation email to {customer_email}: {e}")
 
 
+def _build_host_notification_html(host_name, participant_names, start_time, end_time, location, meet_link, notes=None) -> str:
+    date_str  = start_time.strftime("%A, %B %-d, %Y")
+    start_str = start_time.strftime("%-I:%M %p")
+    end_str   = end_time.strftime("%-I:%M %p")
+    location  = location or "TBD"
+    body = f"""
+            <p style="margin:0 0 8px;font-size:16px;color:#3b1f0f;">Hi {host_name},</p>
+            <p style="margin:0 0 28px;font-size:15px;color:#555;line-height:1.6;">
+              An admin has scheduled a coffee chat on your calendar with
+              <strong style="color:#3b1f0f;">{participant_names}</strong>.
+            </p>
+            {_slot_table(date_str, start_str, end_str, location, host_name, meet_link, notes)}
+            <p style="margin:28px 0 0;font-size:13px;color:#aaa;text-align:center;">
+              Sent by CoffeeMeet
+            </p>"""
+    return _email_wrapper("New session on your calendar", body)
+
+
+def send_host_manual_slot_notification(
+    host_name: str,
+    host_email: str,
+    participant_names: str,
+    start_time,
+    end_time,
+    location: str,
+    meet_link: str = "",
+    notes: str = "",
+):
+    if not BREVO_API_KEY or not EMAIL_ADDRESS:
+        return
+    if not host_email:
+        return
+    try:
+        html = _build_host_notification_html(
+            host_name, participant_names, start_time, end_time, location, meet_link or None, notes or None,
+        )
+        _send(host_email, host_name, "A coffee chat was scheduled on your calendar ☕", html)
+    except Exception as e:
+        print(f"[email] Failed host notification to {host_email}: {e}")
+
+
 def send_update_email(
     customer_name: str,
     customer_email: str,

@@ -188,6 +188,24 @@ class SlotEdit(BaseModel):
 class SlotBook(BaseModel):
     customer_id: int
 
+
+class SlotManualCreate(BaseModel):
+    """Owner-driven manual slot — creates the slot AND books the listed
+    customers in one shot. Used for rescheduling and ad-hoc placements."""
+    cafe_id: int
+    barista_id: int
+    customer_ids: list[int]
+    start_time: datetime
+    end_time: datetime
+    location: str
+    meet_link: Optional[str] = None
+    notes: Optional[str] = None  # e.g. "Rescheduled because the original time conflicted"
+
+    @field_validator("meet_link", mode="before")
+    @classmethod
+    def validate_meet_link(cls, v):
+        return _validate_meet_link(v)
+
 class SlotResponse(BaseModel):
     id: int
     cafe_id: int

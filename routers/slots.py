@@ -4,8 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
-from auth import require_barista, get_optional_user
-from email_service import send_booking_confirmation, send_cancellation_email, send_update_email
+from auth import require_barista, require_owner, get_optional_user
+from email_service import (
+    send_booking_confirmation,
+    send_cancellation_email,
+    send_update_email,
+    send_host_manual_slot_notification,
+)
 
 router = APIRouter()
 
@@ -72,6 +77,119 @@ def create_slot(
     db.add(db_slot)
     db.commit()
     db.refresh(db_slot)
+    return db_slot
+
+
+@router.post("/slots/manual", response_model=schemas.SlotResponse)
+def create_manual_slot(
+    body: schemas.SlotManualCreate,
+    owner: dict = Depends(require_owner),
+    db: Session = Depends(get_db),
+):
+    """Owner-driven slot creation that also books one or more customers in
+    one transaction. Skips one_slot enforcement (this is the rescheduling
+    tool — owner is intentionally placing the participant)."""
+    cafe = db.query(models.Cafe).filter(
+        models.Cafe.id == body.cafe_id,
+        models.Cafe.owner_id == int(owner["sub"]),
+    ).first()
+    if not cafe:
+        raise HTTPException(status_code=404, detail="Cafe not found or not authorized")
+
+    if body.start_time >= body.end_time:
+        raise HTTPException(status_code=400, detail="start_time must be before end_time")
+
+    cafe_start = datetime.combine(cafe.start_date, datetime.min.time())
+    cafe_end = datetime.combine(cafe.end_date, datetime.max.time())
+    if body.start_time < cafe_start or body.end_time > cafe_end:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Slot must fall within the cafe's dates ({cafe.start_date} – {cafe.end_date})",
+        )
+
+    barista = db.query(models.Barista).filter(
+        models.Barista.id == body.barista_id,
+        models.Barista.cafe_id == body.cafe_id,
+    ).first()
+    if not barista:
+        raise HTTPException(status_code=400, detail="Host does not belong to this cafe")
+
+    if not body.customer_ids:
+        raise HTTPException(status_code=400, detail="At least one participant is required")
+
+    cap = cafe.max_participants or 1
+    unique_ids = list(dict.fromkeys(body.customer_ids))  # preserve order, dedupe
+    if len(unique_ids) > cap:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many participants for this cafe (cap is {cap})",
+        )
+
+    customers = db.query(models.Customer).filter(
+        models.Customer.id.in_(unique_ids),
+        models.Customer.cafe_id == body.cafe_id,
+    ).all()
+    if len(customers) != len(unique_ids):
+        raise HTTPException(status_code=400, detail="One or more participants are not in this cafe")
+    customers_by_id = {c.id: c for c in customers}
+
+    db_slot = models.Slot(
+        start_time=body.start_time,
+        end_time=body.end_time,
+        location=body.location,
+        meet_link=body.meet_link,
+        notes=body.notes,
+        cafe_id=body.cafe_id,
+        barista_id=body.barista_id,
+        status="open",
+    )
+    db.add(db_slot)
+    db.flush()
+
+    for cid in unique_ids:
+        db.add(models.SlotBooking(slot_id=db_slot.id, customer_id=cid))
+    db.flush()
+    db.refresh(db_slot)
+    db_slot.status = "booked" if len(db_slot.bookings) >= cap else "open"
+    db.commit()
+    db.refresh(db_slot)
+
+    # Snapshot for emails before the session closes
+    participant_names = ", ".join(customers_by_id[cid].name for cid in unique_ids)
+    for cid in unique_ids:
+        c = customers_by_id[cid]
+        threading.Thread(
+            target=send_booking_confirmation,
+            kwargs={
+                "customer_name": c.name,
+                "customer_email": c.email,
+                "start_time": db_slot.start_time,
+                "end_time": db_slot.end_time,
+                "location": db_slot.location,
+                "meet_link": db_slot.meet_link,
+                "host_name": barista.name,
+                "host_email": barista.email,
+                "notes": db_slot.notes or "",
+                "participant_code": cafe.participant_code or "",
+            },
+            daemon=True,
+        ).start()
+
+    threading.Thread(
+        target=send_host_manual_slot_notification,
+        kwargs={
+            "host_name": barista.name,
+            "host_email": barista.email,
+            "participant_names": participant_names,
+            "start_time": db_slot.start_time,
+            "end_time": db_slot.end_time,
+            "location": db_slot.location,
+            "meet_link": db_slot.meet_link or "",
+            "notes": db_slot.notes or "",
+        },
+        daemon=True,
+    ).start()
+
     return db_slot
 
 
