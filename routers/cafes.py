@@ -185,6 +185,7 @@ def create_cafe(
         one_slot=cafe.one_slot,
         description=cafe.description or None,
         max_participants=cafe.max_participants or 1,
+        reminder_minutes_before=",".join(str(m) for m in (cafe.reminder_minutes_before or [])),
     )
     db.add(db_cafe)
     db.commit()
@@ -218,6 +219,8 @@ def update_cafe(
         cafe.description = updates.description or None
     if updates.max_participants is not None:
         cafe.max_participants = updates.max_participants
+    if updates.reminder_minutes_before is not None:
+        cafe.reminder_minutes_before = ",".join(str(m) for m in updates.reminder_minutes_before)
 
     if cafe.end_date < cafe.start_date:
         raise HTTPException(status_code=400, detail="End date must be on or after start date")

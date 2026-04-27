@@ -1,6 +1,28 @@
 from datetime import datetime, date
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator, field_serializer, Field
 from typing import Optional, Any, List
+
+
+def _parse_reminder_str(s) -> List[int]:
+    """Accept either a comma-separated string from the DB or a list[int] from
+    Pydantic input and return a clean sorted list of unique non-negative ints."""
+    if s is None:
+        return []
+    if isinstance(s, list):
+        items = s
+    elif isinstance(s, str):
+        items = [p for p in s.split(",") if p.strip()]
+    else:
+        return []
+    out = set()
+    for item in items:
+        try:
+            n = int(item)
+            if n >= 0:
+                out.add(n)
+        except (TypeError, ValueError):
+            continue
+    return sorted(out)
 
 
 # ── Owner ──────────────────────────────────────────────────────────────────────
@@ -40,6 +62,12 @@ class CafeCreate(BaseModel):
     one_slot: bool
     description: Optional[str] = None
     max_participants: int = Field(default=1, ge=1, le=100)
+    reminder_minutes_before: List[int] = Field(default_factory=list)
+
+    @field_validator("reminder_minutes_before", mode="before")
+    @classmethod
+    def _norm_reminders(cls, v):
+        return _parse_reminder_str(v)
 
 class CafeUpdate(BaseModel):
     name: Optional[str] = None
@@ -48,6 +76,14 @@ class CafeUpdate(BaseModel):
     one_slot: Optional[bool] = None
     description: Optional[str] = None
     max_participants: Optional[int] = Field(default=None, ge=1, le=100)
+    reminder_minutes_before: Optional[List[int]] = None
+
+    @field_validator("reminder_minutes_before", mode="before")
+    @classmethod
+    def _norm_reminders(cls, v):
+        if v is None:
+            return None
+        return _parse_reminder_str(v)
 
 class CafeResponse(BaseModel):
     id: int
@@ -60,6 +96,12 @@ class CafeResponse(BaseModel):
     owner_id: int
     description: Optional[str] = None
     max_participants: int = 1
+    reminder_minutes_before: List[int] = Field(default_factory=list)
+
+    @field_validator("reminder_minutes_before", mode="before")
+    @classmethod
+    def _norm_reminders(cls, v):
+        return _parse_reminder_str(v)
 
     class Config:
         from_attributes = True
@@ -75,6 +117,12 @@ class PublicCafeResponse(BaseModel):
     participant_code: str
     description: Optional[str] = None
     max_participants: int = 1
+    reminder_minutes_before: List[int] = Field(default_factory=list)
+
+    @field_validator("reminder_minutes_before", mode="before")
+    @classmethod
+    def _norm_reminders(cls, v):
+        return _parse_reminder_str(v)
 
     class Config:
         from_attributes = True

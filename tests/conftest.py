@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-only"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["CORS_ORIGINS"] = "http://localhost:3000,http://localhost:5173"
+os.environ["DISABLE_REMINDER_SCHEDULER"] = "1"
 
 # Now import app modules — they will read the env vars we just set.
 from database import engine, Base, get_db  # noqa: E402

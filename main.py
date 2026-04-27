@@ -38,6 +38,7 @@ def _run_startup_migrations():
         _exec("ALTER TABLE slots ADD COLUMN IF NOT EXISTS notes TEXT", "slots.notes")
         _exec("ALTER TABLE cafes ADD COLUMN IF NOT EXISTS description TEXT", "cafes.description")
         _exec("ALTER TABLE cafes ADD COLUMN IF NOT EXISTS max_participants INTEGER NOT NULL DEFAULT 1", "cafes.max_participants")
+        _exec("ALTER TABLE cafes ADD COLUMN IF NOT EXISTS reminder_minutes_before VARCHAR DEFAULT ''", "cafes.reminder_minutes_before")
         _exec(
             """
             UPDATE cafes
@@ -105,3 +106,12 @@ app.include_router(baristas.router)
 app.include_router(customers.router)
 app.include_router(cafes.router)
 app.include_router(slots.router)
+
+
+# Reminder scheduler — opt-out via DISABLE_REMINDER_SCHEDULER=1 (used in tests
+# so a background thread doesn't keep the test process alive).
+if os.environ.get("DISABLE_REMINDER_SCHEDULER") != "1":
+    @app.on_event("startup")
+    def _start_reminders():
+        from reminders import start_scheduler
+        start_scheduler()

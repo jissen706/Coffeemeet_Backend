@@ -23,6 +23,9 @@ class Cafe(Base):
     # Group coffee chats: how many customers can book the same slot.
     # 1 = traditional 1:1; >1 = group chat that stays open until full.
     max_participants = Column(Integer, nullable=False, default=1, server_default="1")
+    # Comma-separated list of "minutes before slot start" reminder offsets,
+    # e.g. "5,60,1440". Empty / NULL = no reminders.
+    reminder_minutes_before = Column(String, nullable=True, default="")
 
     owner_id = Column(Integer, ForeignKey("owners.id"))
     owner = relationship("Owner", back_populates="cafes")
@@ -77,6 +80,22 @@ class SlotBooking(Base):
     customer = relationship("Customer", back_populates="bookings")
 
     __table_args__ = (UniqueConstraint("slot_id", "customer_id", name="uq_slot_booking"),)
+
+
+class SentReminder(Base):
+    """Dedup table — one row per (slot, customer, minutes_before) reminder
+    that has actually been emailed. Prevents the scheduler from re-sending
+    after restart or repeated polling within the same minute window."""
+    __tablename__ = "sent_reminders"
+    id = Column(Integer, primary_key=True, index=True)
+    slot_id = Column(Integer, ForeignKey("slots.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
+    minutes_before = Column(Integer, nullable=False)
+    sent_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("slot_id", "customer_id", "minutes_before", name="uq_sent_reminder"),
+    )
 
 
 class Owner(Base):

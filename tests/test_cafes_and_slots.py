@@ -222,6 +222,87 @@ def test_get_owner_cafes_wrong_owner_denied(client):
     assert res.status_code == 403
 
 
+def test_cafe_reminder_minutes_round_trip(client):
+    """Reminder offsets persist on create + update and come back deduped/sorted."""
+    _, owner_token = make_owner(client, "remowner@test.com")
+    res = client.post(
+        "/cafes",
+        json={
+            "name": "Reminder Cafe",
+            "start_date": "2030-04-01",
+            "end_date": "2030-04-30",
+            "one_slot": True,
+            "reminder_minutes_before": [60, 5, 60, "1440"],  # dirty input
+        },
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert res.status_code == 200, res.text
+    cafe = res.json()
+    assert cafe["reminder_minutes_before"] == [5, 60, 1440]
+
+    # Update — clear it
+    upd = client.put(
+        f"/cafes/{cafe['id']}",
+        json={"reminder_minutes_before": []},
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert upd.status_code == 200
+    assert upd.json()["reminder_minutes_before"] == []
+
+
+def test_reminder_scheduler_sends_once_per_offset(monkeypatch):
+    """Drives reminders._tick directly with fixed time to verify it sends once
+    per (slot,customer,minutes) and never re-sends."""
+    import models, reminders
+    from database import SessionLocal
+    from datetime import datetime, timedelta
+
+    sent = []
+    monkeypatch.setattr(
+        reminders, "send_reminder_email",
+        lambda **kw: sent.append((kw["customer_email"], kw["minutes_before"])),
+    )
+
+    db = SessionLocal()
+    try:
+        # Build minimal fixture: owner → cafe (with reminders) → barista, customer, slot+booking
+        owner = models.Owner(name="O", email="rs_owner@x", hashed_password="x")
+        db.add(owner); db.commit(); db.refresh(owner)
+
+        slot_start = datetime.utcnow() + timedelta(minutes=4)  # in 4 minutes — falls into the "5 min before" window
+        cafe = models.Cafe(
+            name="RS", start_date=slot_start.date(), end_date=slot_start.date(),
+            owner_id=owner.id, one_slot=True, reminder_minutes_before="5,60",
+            join_code="RSCODE", participant_code="RSPART",
+        )
+        db.add(cafe); db.commit(); db.refresh(cafe)
+
+        barista = models.Barista(name="B", email="rs_b@x", cafe_id=cafe.id)
+        cust = models.Customer(name="C", email="rs_c@x", cafe_id=cafe.id)
+        db.add_all([barista, cust]); db.commit()
+        db.refresh(barista); db.refresh(cust)
+
+        slot = models.Slot(
+            start_time=slot_start, end_time=slot_start + timedelta(minutes=15),
+            location="Counter", cafe_id=cafe.id, barista_id=barista.id, status="open",
+        )
+        db.add(slot); db.commit(); db.refresh(slot)
+        db.add(models.SlotBooking(slot_id=slot.id, customer_id=cust.id))
+        db.commit()
+    finally:
+        db.close()
+
+    # First tick — should send the 5-minute reminder, NOT the 60-minute one.
+    reminders._tick()
+    assert ("rs_c@x", 5) in sent
+    assert all(m != 60 for _, m in sent)
+
+    # Second tick — should NOT re-send (dedup row exists).
+    sent.clear()
+    reminders._tick()
+    assert sent == []
+
+
 def test_manual_slot_creates_and_books(client):
     """Owner creates a manual slot AND books two participants in one call."""
     _, owner_token = make_owner(client, "manualowner@test.com")
