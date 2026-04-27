@@ -224,8 +224,33 @@ def delete_slot(
         if slot.barista_id != int(user["sub"]):
             raise HTTPException(status_code=403, detail="You can only delete your own slots")
 
+    # Snapshot everything we need to email participants BEFORE we delete the
+    # slot — once cascade fires the bookings (and their customer relations
+    # via the session) are gone.
+    cafe = db.query(models.Cafe).filter(models.Cafe.id == slot.cafe_id).first()
+    cancel_targets = []
+    for b in slot.bookings:
+        if not b.customer:
+            continue
+        cancel_targets.append({
+            "customer_name": b.customer.name,
+            "customer_email": b.customer.email,
+            "start_time": slot.start_time,
+            "end_time": slot.end_time,
+            "host_name": slot.barista.name if slot.barista else "",
+            "participant_code": cafe.participant_code if cafe else "",
+        })
+
     db.delete(slot)
     db.commit()
+
+    for data in cancel_targets:
+        if data["customer_email"]:
+            threading.Thread(
+                target=send_cancellation_email,
+                kwargs=data,
+                daemon=True,
+            ).start()
 
 
 @router.patch("/slots/{slot_id}/edit", response_model=schemas.SlotResponse)
