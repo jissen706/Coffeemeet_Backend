@@ -88,8 +88,21 @@ try:
 except Exception as _e:
     _log.exception("startup migrations crashed but app will continue: %s", _e)
 
-_raw_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
-allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
+
+
+def _allowed_cors_origins() -> list[str]:
+    raw_origins = os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+    origins = [o.strip().rstrip("/") for o in raw_origins.split(",") if o.strip()]
+
+    frontend_url = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+    if frontend_url:
+        origins.append(frontend_url)
+
+    return list(dict.fromkeys(origins))
+
+
+allowed_origins = _allowed_cors_origins()
 
 app = FastAPI()
 
@@ -100,6 +113,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 
 app.include_router(owners.router)
 app.include_router(baristas.router)
