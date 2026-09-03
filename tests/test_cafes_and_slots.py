@@ -59,10 +59,10 @@ def test_create_cafe_success(client):
     assert cafe["name"] == "Test Cafe"
 
 
-def test_get_cafe_by_join_code(client):
+def test_get_cafe_by_participant_code(client):
     _, token = make_owner(client, "cafeowner2@test.com")
     cafe = make_cafe(client, token, name="Join Code Cafe")
-    res = client.get(f"/cafes/join/{cafe['join_code']}")
+    res = client.get(f"/cafes/join/{cafe['participant_code']}")
     assert res.status_code == 200
     assert res.json()["id"] == cafe["id"]
 

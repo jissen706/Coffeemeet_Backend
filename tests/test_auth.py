@@ -21,13 +21,13 @@ def test_create_token_contains_expected_claims():
     assert "exp" in payload
 
 
-def test_token_expiry_is_roughly_24h():
+def test_token_expiry_is_roughly_30_days():
     token = auth.create_token({"sub": "1", "role": "owner"})
     payload = jwt.decode(token, SECRET, algorithms=["HS256"])
     exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
     now = datetime.now(timezone.utc)
     delta = exp - now
-    assert timedelta(hours=23) < delta < timedelta(hours=25)
+    assert timedelta(days=29, hours=23) < delta < timedelta(days=30, hours=1)
 
 
 def test_decode_token_valid():
